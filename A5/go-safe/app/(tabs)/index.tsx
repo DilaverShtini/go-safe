@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { View, StyleSheet, Alert, TouchableOpacity, Text, ActivityIndicator } from "react-native";
 import MapView, { Marker, MapPressEvent, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import * as Location from "expo-location";
-import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
-
+import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import SearchBar from "../../src/components/SearchBar";
 import FloatingReportButton from "../../src/components/FloatingReportButton";
 import ReportModal from "../../src/components/ReportModal";
@@ -14,6 +13,11 @@ interface Report {
   longitude: number;
   type: string;
   note: string;
+}
+
+interface RouteInfo {
+  distance: number; // Metri
+  duration: number; // Secondi
 }
 
 const TYPE_ICONS: Record<string, any> = {
@@ -38,14 +42,19 @@ const DEFAULT_REGION = {
   longitudeDelta: 0.05,
 };
 
+// Raggio di sicurezza per considerare un pericolo "toccato" (circa 90 metri)
+const SAFE_DISTANCE_THRESHOLD = 0.0009; 
+
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
   
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  
   const [destination, setDestination] = useState<{ latitude: number; longitude: number } | null>(null);
+  
   const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number; longitude: number }[]>([]);
   const [isRouting, setIsRouting] = useState(false);
+  const [routeStatus, setRouteStatus] = useState<'safe' | 'danger'>('safe');
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
 
   const [selectedPoint, setSelectedPoint] = useState<{ latitude: number; longitude: number } | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
@@ -55,9 +64,7 @@ export default function MapScreen() {
     (async () => {
       try {
         let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          return;
-        }
+        if (status !== 'granted') return;
 
         let location = await Location.getCurrentPositionAsync({});
         setUserLocation(location.coords);
@@ -86,29 +93,188 @@ export default function MapScreen() {
     });
   };
 
+  const getDistanceScore = (pt1: {latitude: number, longitude: number}, pt2: {latitude: number, longitude: number}) => {
+    return Math.sqrt(Math.pow(pt1.latitude - pt2.latitude, 2) + Math.pow(pt1.longitude - pt2.longitude, 2));
+  };
+
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.ceil(seconds / 60); 
+    if (minutes >= 60) {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return `${hours} h ${mins} min`;
+    }
+    return `${minutes} min`;
+  };
+
+  const formatDistance = (meters: number) => {
+    if (meters >= 1000) {
+        return `${(meters / 1000).toFixed(1)} km`;
+    }
+    return `${Math.round(meters)} m`;
+  };
+
+  const generateOffsetWaypoints = (start: { latitude: number, longitude: number }, end: { latitude: number, longitude: number }) => {
+    const midLat = (start.latitude + end.latitude) / 2;
+    const midLon = (start.longitude + end.longitude) / 2;
+    
+    // Vettore direzione
+    const dLat = end.latitude - start.latitude;
+    const dLon = end.longitude - start.longitude;
+    
+    // 150m è sufficiente per prendere la "via parallela" in una città standard.
+    const offsetAmount = 0.0015; 
+
+    const wp1 = {
+        latitude: midLat - (dLon * 0.5), 
+        longitude: midLon + (dLat * 0.5)
+    };
+    
+    const dist1 = Math.sqrt(Math.pow(wp1.latitude - midLat, 2) + Math.pow(wp1.longitude - midLon, 2));
+    const ratio1 = offsetAmount / (dist1 || 1); // Evita divisione per 0
+    
+    const alt1 = {
+        latitude: midLat + (wp1.latitude - midLat) * ratio1,
+        longitude: midLon + (wp1.longitude - midLon) * ratio1
+    };
+
+    const alt2 = {
+        latitude: midLat - (alt1.latitude - midLat),
+        longitude: midLon - (alt1.longitude - midLon)
+    };
+
+    return [alt1, alt2];
+  };
+
   const fetchRoute = async (start: { latitude: number, longitude: number }, end: { latitude: number, longitude: number }) => {
     setIsRouting(true);
+    setRouteStatus('safe'); 
+    setRouteInfo(null);
+    setRouteCoordinates([]);
+
     try {
-      const response = await fetch(
-        `http://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson`
-      );
-      const json = await response.json();
-      if (json.routes && json.routes.length > 0) {
-        const coordinates = json.routes[0].geometry.coordinates.map((coord: number[]) => ({
-          latitude: coord[1],
-          longitude: coord[0],
-        }));
-        setRouteCoordinates(coordinates);
-        mapRef.current?.fitToCoordinates(coordinates, {
-            edgePadding: { top: 100, right: 50, bottom: 100, left: 50 },
-            animated: true,
-        });
-      } else {
-        Alert.alert("Errore", "Impossibile trovare un percorso.");
+      const baseUrl = "https://routing.openstreetmap.de/routed-foot/route/v1/foot";
+      
+      const urlDirect = `${baseUrl}/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson&alternatives=true`;
+
+      const [wp1, wp2] = generateOffsetWaypoints(start, end);
+      
+      const urlAlt1 = `${baseUrl}/${start.longitude},${start.latitude};${wp1.longitude},${wp1.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson`;
+      const urlAlt2 = `${baseUrl}/${start.longitude},${start.latitude};${wp2.longitude},${wp2.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson`;
+
+      const results = await Promise.all([
+          fetch(urlDirect).then(r => r.json()).catch(e => null),
+          fetch(urlAlt1).then(r => r.json()).catch(e => null),
+          fetch(urlAlt2).then(r => r.json()).catch(e => null)
+      ]);
+
+      let allRoutes: any[] = [];
+
+      results.forEach((json, index) => {
+          if (json && json.code === 'Ok' && json.routes) {
+              json.routes.forEach((r: any) => {
+                   // Aggiungiamo un ID univoco basato sulla geometria per evitare duplicati esatti
+                   r._sourceIndex = index; 
+                   // Calcoliamo un hash semplice della geometria per rimuovere duplicati
+                   r._geoHash = r.geometry.coordinates.length + "_" + r.duration; 
+                   allRoutes.push(r);
+              });
+          }
+      });
+
+      // Rimuoviamo duplicati (spesso la via diretta e la deviazione leggera sono uguali)
+      //const uniqueRoutes = Array.from(new Map(allRoutes.map(item => [item._geoHash, item])).values());
+
+      if (allRoutes.length === 0) {
+        Alert.alert("Errore", "Impossibile trovare percorsi validi.");
+        return;
       }
+
+      let bestRoute = null;
+      let lowestDangerCount = Infinity;
+      let bestRouteDistance = Infinity; 
+      let isAlternativeSelected = false;
+
+      for (const route of allRoutes) {
+          const pathPoints = route.geometry.coordinates.map((c: number[]) => ({ lat: c[1], lon: c[0] }));
+          let currentRouteDangerCount = 0;
+
+          // Analisi collisioni
+          for (let i = 0; i < pathPoints.length; i += 2) { 
+              const point = pathPoints[i];
+              const pointObj = {latitude: point.lat, longitude: point.lon};
+              
+              const hit = reports.some(report => 
+                  getDistanceScore(pointObj, report) < SAFE_DISTANCE_THRESHOLD
+              );
+              
+              if (hit) {
+                  currentRouteDangerCount++;
+                  i += 10;
+              }
+          }
+
+          console.log(`Rotta trovata: Distanza ${route.distance}m, Pericoli: ${currentRouteDangerCount}`);
+
+          if (currentRouteDangerCount < lowestDangerCount) {
+              lowestDangerCount = currentRouteDangerCount;
+              bestRoute = route;
+              bestRouteDistance = route.distance;
+              // Se la rotta scelta non è la prima della lista (che di solito è la diretta), è un'alternativa
+              isAlternativeSelected = (route !== allRoutes[0]);
+          } 
+          // A parità di pericoli, prendi la più breve
+          else if (currentRouteDangerCount === lowestDangerCount) {
+              if (route.distance < bestRouteDistance) {
+                  bestRoute = route;
+                  bestRouteDistance = route.distance;
+                  isAlternativeSelected = (route !== allRoutes[0]);
+              }
+          }
+      }
+
+      // Fallback
+      if (!bestRoute) bestRoute = allRoutes[0];
+
+      // Feedback Utente
+      if (lowestDangerCount === 0) {
+          setRouteStatus('safe');
+          if (isAlternativeSelected && reports.length > 0) {
+             Alert.alert("Percorso Ottimizzato", "Percorso deviato per evitare zone a rischio.");
+          }
+      } else {
+          setRouteStatus('danger');
+          Alert.alert("Attenzione", "Tutte le strade alternative attraversano zone segnalate.");
+      }
+
+      let finalDuration = bestRoute.duration;
+      const speedKmh = (bestRoute.distance / 1000) / (bestRoute.duration / 3600);
+      if (speedKmh > 6) {
+          finalDuration = bestRoute.distance / 1.25; // 1.25 m/s = 4.5 km/h
+      }
+
+      setRouteInfo({
+          distance: bestRoute.distance,
+          duration: finalDuration
+      });
+
+      const coordinates = bestRoute.geometry.coordinates.map((coord: number[]) => ({
+        latitude: coord[1],
+        longitude: coord[0],
+      }));
+
+      setRouteCoordinates(coordinates);
+      
+      setTimeout(() => {
+          mapRef.current?.fitToCoordinates(coordinates, {
+              edgePadding: { top: 80, right: 50, bottom: 250, left: 50 },
+              animated: true,
+          });
+      }, 100);
+
     } catch (error) {
       console.error(error);
-      Alert.alert("Errore", "Errore connessione.");
+      Alert.alert("Errore", "Errore di connessione mappe.");
     } finally {
       setIsRouting(false);
     }
@@ -131,9 +297,9 @@ export default function MapScreen() {
 
   const handleMapPress = (e: MapPressEvent) => {
     if (modalVisible) return;
-    setRouteCoordinates([]); 
-    setDestination(null);
-    setSelectedPoint(e.nativeEvent.coordinate);
+    if (!destination) {
+        setSelectedPoint(e.nativeEvent.coordinate);
+    }
   };
 
   const handleFloatingButtonPress = () => {
@@ -163,6 +329,8 @@ export default function MapScreen() {
   const clearNavigation = () => {
       setDestination(null);
       setRouteCoordinates([]);
+      setRouteInfo(null);
+      setRouteStatus('safe');
       if (userLocation) {
         mapRef.current?.animateToRegion({
             latitude: userLocation.latitude,
@@ -185,9 +353,15 @@ export default function MapScreen() {
         onPress={handleMapPress}
       >
         {routeCoordinates.length > 0 && (
-            <Polyline coordinates={routeCoordinates} strokeColor="#6c5ce7" strokeWidth={5} />
+            <Polyline 
+              coordinates={routeCoordinates} 
+              strokeColor={routeStatus === 'danger' ? "#e74c3c" : "#6c5ce7"} 
+              strokeWidth={5} 
+              lineDashPattern={[1]} 
+            />
         )}
         {destination && <Marker coordinate={destination} title="Arrivo" pinColor="red" />}
+        
         {reports.map((report) => (
           <Marker
             key={report.id}
@@ -199,6 +373,7 @@ export default function MapScreen() {
             </View>
           </Marker>
         ))}
+        
         {selectedPoint && <Marker coordinate={selectedPoint} title="Punto Selezionato" pinColor="blue" opacity={0.7} />}
       </MapView>
 
@@ -208,16 +383,32 @@ export default function MapScreen() {
         <View style={styles.loaderContainer}><ActivityIndicator size="large" color="#6c5ce7" /></View>
       )}
       
-      {destination && (
-          <TouchableOpacity style={styles.clearNavButton} onPress={clearNavigation}>
-              <Ionicons name="close" size={24} color="white" />
-              <Text style={styles.clearNavText}>Esci</Text>
-          </TouchableOpacity>
+      {routeInfo && (
+          <View style={styles.infoCard}>
+              <View style={styles.infoTextContainer}>
+                  <View style={styles.infoRow}>
+                    <FontAwesome5 name="walking" size={20} color="#333" style={{marginRight: 10}} />
+                    <Text style={styles.infoTime}>{formatDuration(routeInfo.duration)}</Text>
+                  </View>
+                  <Text style={styles.infoDistance}>Distanza: {formatDistance(routeInfo.distance)}</Text>
+              </View>
+              
+              <View style={styles.divider} />
+
+              <TouchableOpacity style={styles.closeBtn} onPress={clearNavigation}>
+                  <Ionicons name="close" size={24} color="#e74c3c" />
+                  <Text style={styles.closeBtnText}>Esci</Text>
+              </TouchableOpacity>
+          </View>
       )}
 
-      {/* Pulsante Posizione */}
       <TouchableOpacity 
-        style={[styles.myLocationButton, !destination ? { bottom: 110 } : { bottom: 30 }]} 
+        style={[
+            styles.myLocationButton, 
+            routeInfo 
+                ? { bottom: 170 } 
+                : { bottom: 110 } 
+        ]} 
         onPress={handleCenterOnUser}
       >
         <MaterialCommunityIcons name="crosshairs-gps" size={28} color="#333" />
@@ -235,13 +426,8 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1
-  },
-  map: {
-    width: "100%",
-    height: "100%"
-  },
+  container: { flex: 1 },
+  map: { width: "100%", height: "100%" },
   markerBg: {
     padding: 6,
     borderRadius: 20,
@@ -262,30 +448,63 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     elevation: 5,
   },
-  clearNavButton: {
-      position: 'absolute', bottom: 30, alignSelf: 'center', backgroundColor: '#e74c3c',
-      flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 20,
-      borderRadius: 25, elevation: 5, gap: 5,
-  },
-  clearNavText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16
-  },
   myLocationButton: {
-    position: "absolute",
-    right: 20,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "white",
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    zIndex: 1000,
+    position: "absolute", right: 20, width: 50, height: 50, borderRadius: 25,
+    backgroundColor: "white", justifyContent: "center", alignItems: "center",
+    elevation: 5, shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25, shadowRadius: 3.84, zIndex: 1000,
+  },
+  infoCard: {
+      position: 'absolute',
+      bottom: 40,
+      left: 20,
+      right: 20,
+      backgroundColor: 'white',
+      borderRadius: 20,
+      padding: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      elevation: 10,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 5,
+      zIndex: 900,
+  },
+  infoTextContainer: {
+      flex: 1,
+  },
+  infoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 5,
+  },
+  infoTime: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: '#2d3436',
+  },
+  infoDistance: {
+      fontSize: 16,
+      color: '#636e72',
+      marginLeft: 3, 
+  },
+  divider: {
+      width: 1,
+      height: '80%',
+      backgroundColor: '#dfe6e9',
+      marginHorizontal: 15,
+  },
+  closeBtn: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 10,
+  },
+  closeBtnText: {
+      color: '#e74c3c',
+      fontSize: 14,
+      fontWeight: '600',
+      marginTop: 4,
   }
 });
