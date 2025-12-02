@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { View, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, StatusBar, Text } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-// Import Components
 import GroupCard from "../../src/components/GroupCard";
 import GroupsHeader from "../../src/components/GroupsHeader";
 import CreateGroupModal from "../../src/components/CreateGroupModal";
@@ -15,22 +14,39 @@ interface GroupItem {
   startTime: string;
   initial: string;
   color?: string;
+  isJoined?: boolean; 
 }
 
+// Inizializziamo con isJoined false
 const INITIAL_GROUPS: GroupItem[] = [
-  { id: "1", name: "Destinazione 1", startZone: "Milano Centrale", startTime: "20:30", initial: "A", color: "#E1BEE7" },
-  { id: "2", name: "Destinazione 2", startZone: "Piazza del Popolo", startTime: "23:00", initial: "B", color: "#E1BEE7" },
+  { id: "1", name: "Destinazione 1", startZone: "Milano Centrale", startTime: "20:30", initial: "A", color: "#E1BEE7", isJoined: false },
+  { id: "2", name: "Destinazione 2", startZone: "Piazza del Popolo", startTime: "23:00", initial: "B", color: "#E1BEE7", isJoined: false },
 ];
 
 export default function GroupsScreen() {
   const [groups, setGroups] = useState<GroupItem[]>(INITIAL_GROUPS);
   
-  // Stati per i Modal
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
   const [isDetailModalVisible, setDetailModalVisible] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState<GroupItem | null>(null); // <--- Gruppo selezionato
+  const [selectedGroup, setSelectedGroup] = useState<GroupItem | null>(null);
 
-  // Gestione Creazione
+  // --- FUNZIONE PER PARTECIPARE AL GRUPPO ---
+  const handleJoinGroup = (groupId: string) => {
+    // 1. Aggiorniamo la lista principale
+    const updatedGroups = groups.map(group => {
+        if (group.id === groupId) {
+            return { ...group, isJoined: true };
+        }
+        return group;
+    });
+    setGroups(updatedGroups);
+
+    // 2. Aggiorniamo anche il gruppo correntemente selezionato (per vedere il tasto cambiare subito)
+    if (selectedGroup && selectedGroup.id === groupId) {
+        setSelectedGroup({ ...selectedGroup, isJoined: true });
+    }
+  };
+
   const handleCreateGroup = (newGroupData: any) => {
     const newGroup: GroupItem = {
       id: Date.now().toString(),
@@ -39,21 +55,20 @@ export default function GroupsScreen() {
       startTime: newGroupData.startTime,
       initial: newGroupData.initial,
       color: "#E1BEE7",
+      isJoined: true,
     };
     setGroups(prev => [...prev, newGroup]);
     setCreateModalVisible(false);
   };
 
-  // Gestione Apertura Dettaglio
   const handleOpenDetail = (group: GroupItem) => {
-    setSelectedGroup(group);     // Imposta i dati del gruppo da mostrare
-    setDetailModalVisible(true); // Apre il modal
+    setSelectedGroup(group);
+    setDetailModalVisible(true);
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        
         <GroupsHeader />
 
         <FlatList
@@ -63,22 +78,19 @@ export default function GroupsScreen() {
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => handleOpenDetail(item)} activeOpacity={0.9}>
-                {/* Avvolgiamo la card in un TouchableOpacity se vogliamo che cliccando ovunque si apra, 
-                    oppure passiamo la funzione solo all'occhio */}
                 <GroupCard
                   name={item.name}
                   startZone={item.startZone}
                   startTime={item.startTime}
                   initial={item.initial}
                   color={item.color}
-                  // Se vuoi che si apra SOLO cliccando l'occhio:
+                  isJoined={item.isJoined}
                   onPressEye={() => handleOpenDetail(item)} 
                 />
             </TouchableOpacity>
           )}
         />
 
-        {/* Floating Button (+ Crea) */}
         <TouchableOpacity 
             style={styles.fab} 
             onPress={() => setCreateModalVisible(true)}
@@ -87,18 +99,18 @@ export default function GroupsScreen() {
           <MaterialCommunityIcons name="plus" size={32} color="#333" />
         </TouchableOpacity>
 
-        {/* Modal Creazione Gruppo */}
         <CreateGroupModal 
           visible={isCreateModalVisible}
           onClose={() => setCreateModalVisible(false)}
           onSubmit={handleCreateGroup}
         />
 
-        {/* Modal Dettaglio Gruppo (NUOVO) */}
+        {/* Passiamo la funzione onJoin al Modal */}
         <GroupDetailModal 
           visible={isDetailModalVisible}
           group={selectedGroup}
           onClose={() => setDetailModalVisible(false)}
+          onJoin={handleJoinGroup} //Collegamento azione
         />
         
       </View>

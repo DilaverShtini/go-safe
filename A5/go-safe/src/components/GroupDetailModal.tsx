@@ -13,20 +13,24 @@ import { MaterialCommunityIcons, Feather, Ionicons } from "@expo/vector-icons";
 
 import UserProfileModal, { UserProfile } from "./UserProfileModal";
 
+// Definizione del tipo per il Gruppo
 interface GroupItem {
   id: string;
   name: string;
   startZone: string;
   startTime: string;
+  isJoined?: boolean;
 }
 
+// Props che il componente accetta
 interface GroupDetailModalProps {
   visible: boolean;
   group: GroupItem | null;
   onClose: () => void;
+  onJoin: (groupId: string) => void; 
 }
 
-// Mock Data: Simuliamo i dati degli utenti che potrebbero essere nel gruppo
+// Dati finti per i partecipanti (Mock)
 const MOCK_PARTICIPANTS: UserProfile[] = [
     {
         id: "u1",
@@ -35,10 +39,10 @@ const MOCK_PARTICIPANTS: UserProfile[] = [
         isVerified: true,
         connections: 7,
         trips: 3,
-        rating: 5,
+        rating: 4.5,
         reviews: [
-            { id: "r1", title: "Esperienza 1", tags: "@Persona2, @Persona3", text: "Recensione esperienza 1", rating: 4 },
-            { id: "r2", title: "Esperienza 2", tags: "@Persona4, @Persona5", text: "Recensione esperienza 2", rating: 5 },
+            { id: "r1", title: "Viaggio piacevole", tags: "@Persona2", text: "Compagnia ottima, puntuale.", rating: 5 },
+            { id: "r2", title: "Tutto ok", tags: "@Persona4", text: "Viaggio tranquillo.", rating: 4 },
         ]
     },
     {
@@ -50,19 +54,31 @@ const MOCK_PARTICIPANTS: UserProfile[] = [
         trips: 1,
         rating: 4,
         reviews: []
+    },
+    {
+        id: "u3",
+        name: "Persona 3",
+        avatarUrl: "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671122.jpg",
+        isVerified: true,
+        connections: 12,
+        trips: 8,
+        rating: 5,
+        reviews: []
     }
 ];
 
-export default function GroupDetailModal({ visible, group, onClose }: GroupDetailModalProps) {
-  // Stato per gestire il modale del profilo utente
+export default function GroupDetailModal({ visible, group, onClose, onJoin }: GroupDetailModalProps) {
+  // Stati per gestire l'apertura del profilo utente
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isProfileVisible, setProfileVisible] = useState(false);
 
+  // Funzione per aprire il profilo di un partecipante
   const handleOpenProfile = (user: UserProfile) => {
       setSelectedUser(user);
       setProfileVisible(true);
   };
 
+  // Se non c'è un gruppo selezionato, non mostrare nulla
   if (!group) return null;
 
   return (
@@ -70,6 +86,7 @@ export default function GroupDetailModal({ visible, group, onClose }: GroupDetai
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           
+          {/* --- HEADER --- */}
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose} style={styles.backButton}>
               <Feather name="arrow-left" size={26} color="#333" />
@@ -80,9 +97,9 @@ export default function GroupDetailModal({ visible, group, onClose }: GroupDetai
 
           <ScrollView contentContainerStyle={styles.scrollContent}>
             
+            {/* --- SEZIONE PARTECIPANTI --- */}
             <Text style={styles.sectionLabel}>Partecipanti</Text>
             
-            {/* Mappiamo i partecipanti finti */}
             {MOCK_PARTICIPANTS.map((participant) => (
                 <View key={participant.id} style={styles.card}>
                   <Image 
@@ -91,7 +108,7 @@ export default function GroupDetailModal({ visible, group, onClose }: GroupDetai
                   />
                   <Text style={styles.participantName}>{participant.name}</Text>
                   
-                  {/* Cliccando sull'occhio si apre il profilo */}
+                  {/* Icona Occhio per aprire il profilo */}
                   <TouchableOpacity 
                     style={styles.eyeIcon} 
                     onPress={() => handleOpenProfile(participant)}
@@ -101,8 +118,10 @@ export default function GroupDetailModal({ visible, group, onClose }: GroupDetai
                 </View>
             ))}
 
+            {/* --- SEZIONE PARTENZA --- */}
             <Text style={styles.sectionLabel}>Partenza</Text>
 
+            {/* Luogo */}
             <View style={styles.infoCard}>
               <View style={styles.iconCircle}>
                 <Ionicons name="location-sharp" size={20} color="#5E35B1" />
@@ -110,6 +129,7 @@ export default function GroupDetailModal({ visible, group, onClose }: GroupDetai
               <Text style={styles.infoText}>{group.startZone}</Text>
             </View>
 
+            {/* Orario */}
             <View style={styles.infoCard}>
               <View style={styles.iconCircle}>
                 <Feather name="clock" size={20} color="#5E35B1" />
@@ -117,15 +137,28 @@ export default function GroupDetailModal({ visible, group, onClose }: GroupDetai
               <Text style={styles.infoText}>{group.startTime}</Text>
             </View>
 
+            {/* --- BOTTONE ISCRIZIONE (Cambia stato se partecipi) --- */}
             <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.actionButton} onPress={() => alert("Richiesta inviata!")}>
-                <Text style={styles.actionButtonText}>Richiedi di partecipare</Text>
-              </TouchableOpacity>
+                {group.isJoined ? (
+                    // Cso: Utente partecipa già (Verde)
+                    <View style={[styles.actionButton, styles.joinedButton]}>
+                        <MaterialCommunityIcons name="check" size={20} color="white" style={{marginRight: 8}}/>
+                        <Text style={styles.joinedButtonText}>Fai parte del gruppo</Text>
+                    </View>
+                ) : (
+                    // Caso: Utente NON partecipa (Grigio/Viola)
+                    <TouchableOpacity 
+                        style={styles.actionButton} 
+                        onPress={() => onJoin(group.id)} // Chiama la funzione per iscriversi
+                    >
+                        <Text style={styles.actionButtonText}>Richiedi di partecipare</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
           </ScrollView>
 
-          {/* INSERIMENTO DEL MODALE PROFILO */}
+          {/* --- MODALE PROFILO UTENTE (Nidificato) --- */}
           <UserProfileModal 
             visible={isProfileVisible}
             user={selectedUser}
@@ -171,6 +204,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     fontWeight: "500",
   },
+  // Card Partecipante
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -202,6 +236,7 @@ const styles = StyleSheet.create({
   eyeIcon: {
     padding: 5,
   },
+  // Card Info (Luogo/Orario)
   infoCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -226,6 +261,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
   },
+  // Stili Bottone
   buttonContainer: {
     marginTop: 30,
     alignItems: "center",
@@ -243,10 +279,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    flexDirection: 'row',
+    justifyContent: 'center'
   },
   actionButtonText: {
     color: "#333",
     fontWeight: "bold",
     fontSize: 16,
   },
+  // Stile Bottone "Partecipi"
+  joinedButton: {
+    backgroundColor: "#4CAF50", // Verde Successo
+    borderColor: "#388E3C",
+  },
+  joinedButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16
+  }
 });

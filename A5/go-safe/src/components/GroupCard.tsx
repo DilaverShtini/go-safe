@@ -8,6 +8,7 @@ interface GroupCardProps {
   startTime: string;
   initial: string;
   color?: string;
+  isJoined?: boolean;
   onPressEye?: () => void;
 }
 
@@ -17,23 +18,34 @@ export default function GroupCard({
   startTime, 
   initial, 
   color = "#E1BEE7",
+  isJoined = false,
   onPressEye 
 }: GroupCardProps) {
   return (
-    <View style={styles.card}>
-      {/* Avatar */}
+    <View style={[
+      styles.card, 
+      // Se partecipi, il bordo diventa verde e un po' più spesso
+      isJoined && styles.joinedCard 
+    ]}>
       <View style={[styles.avatarContainer, { backgroundColor: color }]}>
         <Text style={styles.avatarText}>{initial}</Text>
+        
+        {/* Badge di spunta se partecipi */}
+        {isJoined && (
+          <View style={styles.joinedBadge}>
+            <MaterialCommunityIcons name="check" size={12} color="white" />
+          </View>
+        )}
       </View>
 
-      {/* Info Testuali */}
       <View style={styles.infoContainer}>
         <Text style={styles.groupName}>{name}</Text>
         <Text style={styles.groupDetail}>{startZone}</Text>
         <Text style={styles.groupDetail}>{startTime}</Text>
+        {/* Testo aggiuntivo opzionale */}
+        {isJoined && <Text style={styles.joinedText}>Partecipi a questo gruppo</Text>}
       </View>
 
-      {/* Tasto Occhio */}
       <TouchableOpacity onPress={onPressEye} style={styles.iconContainer}>
         <MaterialCommunityIcons name="eye-outline" size={28} color="black" />
       </TouchableOpacity>
@@ -57,6 +69,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#EEE",
   },
+  joinedCard: {
+    borderColor: "#4CAF50",
+    borderWidth: 2,
+    backgroundColor: "#F1F8E9",
+  },
   avatarContainer: {
     width: 50,
     height: 50,
@@ -69,6 +86,20 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     color: "#5E35B1",
+  },
+  // Badge sopra l'avatar
+  joinedBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#4CAF50',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'white'
   },
   infoContainer: {
     flex: 1,
@@ -84,6 +115,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     marginBottom: 2,
+  },
+  joinedText: {
+    fontSize: 12,
+    color: "#4CAF50",
+    fontWeight: "bold",
+    marginTop: 4
   },
   iconContainer: {
     padding: 8,
