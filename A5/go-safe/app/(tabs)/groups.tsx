@@ -6,7 +6,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import GroupCard from "../../src/components/GroupCard";
 import GroupsHeader from "../../src/components/GroupsHeader";
 import CreateGroupModal from "../../src/components/CreateGroupModal";
-import GroupDetailModal from "../../src/components/GroupDetailModal"; // <--- IMPORTA IL NUOVO MODAL
+import GroupDetailModal from "../../src/components/GroupDetailModal";
 
 interface GroupItem {
   id: string;

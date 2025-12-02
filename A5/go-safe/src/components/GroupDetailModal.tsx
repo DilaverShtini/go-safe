@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { 
   View, 
   Text, 
@@ -10,6 +10,8 @@ import {
   SafeAreaView
 } from "react-native";
 import { MaterialCommunityIcons, Feather, Ionicons } from "@expo/vector-icons";
+
+import UserProfileModal, { UserProfile } from "./UserProfileModal";
 
 interface GroupItem {
   id: string;
@@ -24,7 +26,43 @@ interface GroupDetailModalProps {
   onClose: () => void;
 }
 
+// Mock Data: Simuliamo i dati degli utenti che potrebbero essere nel gruppo
+const MOCK_PARTICIPANTS: UserProfile[] = [
+    {
+        id: "u1",
+        name: "Persona 1",
+        avatarUrl: "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg",
+        isVerified: true,
+        connections: 7,
+        trips: 3,
+        rating: 5,
+        reviews: [
+            { id: "r1", title: "Esperienza 1", tags: "@Persona2, @Persona3", text: "Recensione esperienza 1", rating: 4 },
+            { id: "r2", title: "Esperienza 2", tags: "@Persona4, @Persona5", text: "Recensione esperienza 2", rating: 5 },
+        ]
+    },
+    {
+        id: "u2",
+        name: "Persona 2",
+        avatarUrl: "https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg",
+        isVerified: false,
+        connections: 2,
+        trips: 1,
+        rating: 4,
+        reviews: []
+    }
+];
+
 export default function GroupDetailModal({ visible, group, onClose }: GroupDetailModalProps) {
+  // Stato per gestire il modale del profilo utente
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [isProfileVisible, setProfileVisible] = useState(false);
+
+  const handleOpenProfile = (user: UserProfile) => {
+      setSelectedUser(user);
+      setProfileVisible(true);
+  };
+
   if (!group) return null;
 
   return (
@@ -32,7 +70,6 @@ export default function GroupDetailModal({ visible, group, onClose }: GroupDetai
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           
-          {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose} style={styles.backButton}>
               <Feather name="arrow-left" size={26} color="#333" />
@@ -43,42 +80,29 @@ export default function GroupDetailModal({ visible, group, onClose }: GroupDetai
 
           <ScrollView contentContainerStyle={styles.scrollContent}>
             
-            {/* Sezione Partecipanti */}
             <Text style={styles.sectionLabel}>Partecipanti</Text>
             
-            {/* Mock Partecipanti - In futuro questi dati verranno dal DB */}
-            <View style={styles.card}>
-              <Image 
-                source={{ uri: "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg" }} 
-                style={styles.avatar} 
-              />
-              <Text style={styles.participantName}>Persona 1</Text>
-              <MaterialCommunityIcons name="eye-outline" size={28} color="black" style={styles.eyeIcon} />
-            </View>
+            {/* Mappiamo i partecipanti finti */}
+            {MOCK_PARTICIPANTS.map((participant) => (
+                <View key={participant.id} style={styles.card}>
+                  <Image 
+                    source={{ uri: participant.avatarUrl }} 
+                    style={styles.avatar} 
+                  />
+                  <Text style={styles.participantName}>{participant.name}</Text>
+                  
+                  {/* Cliccando sull'occhio si apre il profilo */}
+                  <TouchableOpacity 
+                    style={styles.eyeIcon} 
+                    onPress={() => handleOpenProfile(participant)}
+                  >
+                    <MaterialCommunityIcons name="eye-outline" size={28} color="black" />
+                  </TouchableOpacity>
+                </View>
+            ))}
 
-            <View style={styles.card}>
-              <Image 
-                source={{ uri: "https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg" }} 
-                style={styles.avatar} 
-              />
-              <Text style={styles.participantName}>Persona 2</Text>
-              <MaterialCommunityIcons name="eye-outline" size={28} color="black" style={styles.eyeIcon} />
-            </View>
-
-            <View style={styles.card}>
-              <Image 
-                source={{ uri: "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671122.jpg" }} 
-                style={styles.avatar} 
-              />
-              <Text style={styles.participantName}>Persona 3</Text>
-              <MaterialCommunityIcons name="eye-outline" size={28} color="black" style={styles.eyeIcon} />
-            </View>
-
-
-            {/* Sezione Partenza */}
             <Text style={styles.sectionLabel}>Partenza</Text>
 
-            {/* Luogo */}
             <View style={styles.infoCard}>
               <View style={styles.iconCircle}>
                 <Ionicons name="location-sharp" size={20} color="#5E35B1" />
@@ -86,7 +110,6 @@ export default function GroupDetailModal({ visible, group, onClose }: GroupDetai
               <Text style={styles.infoText}>{group.startZone}</Text>
             </View>
 
-            {/* Orario */}
             <View style={styles.infoCard}>
               <View style={styles.iconCircle}>
                 <Feather name="clock" size={20} color="#5E35B1" />
@@ -94,7 +117,6 @@ export default function GroupDetailModal({ visible, group, onClose }: GroupDetai
               <Text style={styles.infoText}>{group.startTime}</Text>
             </View>
 
-            {/* Pulsante Richiedi Partecipazione */}
             <View style={styles.buttonContainer}>
               <TouchableOpacity style={styles.actionButton} onPress={() => alert("Richiesta inviata!")}>
                 <Text style={styles.actionButtonText}>Richiedi di partecipare</Text>
@@ -102,6 +124,14 @@ export default function GroupDetailModal({ visible, group, onClose }: GroupDetai
             </View>
 
           </ScrollView>
+
+          {/* INSERIMENTO DEL MODALE PROFILO */}
+          <UserProfileModal 
+            visible={isProfileVisible}
+            user={selectedUser}
+            onClose={() => setProfileVisible(false)}
+          />
+
         </View>
       </SafeAreaView>
     </Modal>
@@ -115,7 +145,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
   },
   header: {
     flexDirection: "row",
@@ -124,9 +153,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
   },
-  backButton: {
-    padding: 5,
-  },
+  backButton: { padding: 5 },
   headerTitle: {
     fontSize: 20,
     fontWeight: "bold",
