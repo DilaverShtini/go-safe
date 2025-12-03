@@ -8,7 +8,6 @@ import {
   Modal, 
   TextInput,
   StatusBar,
-  SafeAreaView as SafeAreaViewNative
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -165,7 +164,7 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff', paddingTop: StatusBar.currentHeight || 0 },
+  safeArea: { flex: 1, backgroundColor: '#fff'},
   screenHeader: { paddingHorizontal: 20, paddingVertical: 15, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   screenTitle: { fontSize: 28, fontWeight: "bold", color: "#333" },
   listContent: { paddingBottom: 100 },

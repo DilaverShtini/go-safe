@@ -9,7 +9,8 @@ import {
   ScrollView,
   Alert,
   Platform,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  Linking,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -30,26 +31,83 @@ export default function ProfileScreen() {
     image: null as string | null,
   });
 
-  const pickImage = async () => {
-    if (!isEditing) return;
+  // GESTIONE FOTOCAMERA
+  const pickFromCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
 
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (permissionResult.granted === false) {
-      Alert.alert("Permesso negato", "Serve il permesso per accedere alla galleria!");
+    if (status !== 'granted') {
+      Alert.alert(
+        "Permesso Fotocamera Negato",
+        "Per scattare una foto profilo, devi abilitare l'accesso alla fotocamera nelle impostazioni.",
+        [
+          { text: "Annulla", style: "cancel" },
+          { text: "Apri Impostazioni", onPress: () => Linking.openSettings() }
+        ]
+      );
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    // Apri fotocamera
+    const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
+      aspect: [1, 1], // Quadrata per il profilo
+      quality: 0.5,
     });
 
     if (!result.canceled) {
       setUserInfo({ ...userInfo, image: result.assets[0].uri });
     }
+  };
+
+  // GESTIONE GALLERIA
+  const pickFromGallery = async () => {
+    const permissionCheck = await ImagePicker.getMediaLibraryPermissionsAsync();
+  
+    console.log("Stato permessi galleria:", permissionCheck.status);
+
+    if (permissionCheck.status !== 'granted' && permissionCheck.canAskAgain) {
+      const permissionRequest = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionRequest.status !== 'granted') {
+        Alert.alert(
+          "Permesso Galleria Negato",
+          "Per scegliere una foto profilo, devi abilitare l'accesso alla galleria nelle impostazioni.",
+          [
+            { text: "Annulla", style: "cancel" },
+            { text: "Apri Impostazioni", onPress: () => Linking.openSettings() }
+          ]
+        );
+        return;
+      }
+    }
+    // Nota: Su Android 13+ potrebbe entrare qui anche senza popup espliciti grazie al Photo Picker
+    
+    // Apri galleria
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setUserInfo({ ...userInfo, image: result.assets[0].uri });
+    }
+  };
+
+  // MENU DI SCELTA
+  const handleProfileImagePress = () => {
+    if (!isEditing) return;
+
+    Alert.alert(
+      "Modifica Foto Profilo",
+      "Scegli un'opzione",
+      [
+        { text: "Scatta Foto", onPress: pickFromCamera },
+        { text: "Scegli dalla Galleria", onPress: pickFromGallery },
+        { text: "Annulla", style: "cancel" },
+      ]
+    );
   };
 
   const handleSave = () => {
@@ -98,7 +156,7 @@ export default function ProfileScreen() {
           
           {/* SEZIONE IMMAGINE */}
           <View style={styles.imageContainer}>
-            <TouchableOpacity onPress={pickImage} activeOpacity={isEditing ? 0.7 : 1}>
+            <TouchableOpacity onPress={handleProfileImagePress} activeOpacity={isEditing ? 0.7 : 1}>
               {userInfo.image ? (
                 <Image source={{ uri: userInfo.image }} style={styles.profileImage} />
               ) : (
@@ -216,8 +274,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    marginTop: 30,
+    borderBottomColor: "#eee"
   },
 
   headerTitle: {

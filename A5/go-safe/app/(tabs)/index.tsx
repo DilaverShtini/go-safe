@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, StyleSheet, Alert, TouchableOpacity, Text, ActivityIndicator } from "react-native";
+import { View, StyleSheet, Alert, TouchableOpacity, Text, ActivityIndicator, Linking } from "react-native";
 import MapView, { Marker, MapPressEvent, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import * as Location from "expo-location";
 import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from "@expo/vector-icons";
@@ -60,11 +60,28 @@ export default function MapScreen() {
   const [reports, setReports] = useState<Report[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
 
+  // GESTIONE PERMESSI POSIZIONE
   useEffect(() => {
     (async () => {
       try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') return;
+        let { status } = await Location.getForegroundPermissionsAsync();
+
+        if (status !== 'granted') {
+           const request = await Location.requestForegroundPermissionsAsync();
+           status = request.status;
+        }
+
+        if (status !== 'granted') {
+          Alert.alert(
+            "Permesso Negato",
+            "Per visualizzare la tua posizione sulla mappa e calcolare i percorsi, devi abilitare l'accesso alla localizzazione nelle impostazioni.",
+            [
+              { text: "Annulla", style: "cancel" },
+              { text: "Apri Impostazioni", onPress: () => Linking.openSettings() }
+            ]
+          );
+          return;
+        }
 
         let location = await Location.getCurrentPositionAsync({});
         setUserLocation(location.coords);
@@ -77,12 +94,19 @@ export default function MapScreen() {
         }, 1000); 
 
       } catch (error) {
-        console.log("Errore posizione", error);
+        console.log("Errore recupero posizione", error);
       }
     })();
   }, []);
 
   const handleCenterOnUser = async () => {
+    // Controllo rapido permessi prima di centrare
+    const { status } = await Location.getForegroundPermissionsAsync();
+    if (status !== 'granted') {
+        Alert.alert("Errore", "Permesso di localizzazione non concesso.");
+        return;
+    }
+
     let location = await Location.getCurrentPositionAsync({});
     setUserLocation(location.coords);
     mapRef.current?.animateToRegion({
