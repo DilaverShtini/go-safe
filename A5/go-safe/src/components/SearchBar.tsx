@@ -2,9 +2,8 @@ import React, { useState } from "react";
 import { View, TextInput, TouchableOpacity, StyleSheet, Alert, Keyboard } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import * as Location from "expo-location"; // <--- Necessario per trovare le coordinate
+import * as Location from "expo-location";
 
-// Definiamo cosa deve passare la SearchBar al padre (la Mappa)
 interface SearchBarProps {
   onSearchLocation?: (coords: { latitude: number; longitude: number }) => void;
 }
@@ -14,10 +13,9 @@ export default function SearchBar({ onSearchLocation }: SearchBarProps) {
   const [searchText, setSearchText] = useState("");
 
   const handleSearch = async () => {
-    // Se non c'è testo o non c'è la funzione collegata, non fare nulla
     if (!searchText.trim() || !onSearchLocation) return;
     
-    Keyboard.dismiss(); // Chiude la tastiera
+    Keyboard.dismiss();
 
     try {
       // Usa il servizio nativo del telefono per trovare le coordinate (Gratis)

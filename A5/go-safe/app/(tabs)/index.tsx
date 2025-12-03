@@ -42,7 +42,7 @@ const DEFAULT_REGION = {
   longitudeDelta: 0.05,
 };
 
-// Raggio di sicurezza per considerare un pericolo "toccato" (circa 90 metri)
+// Raggio di sicurezza per considerare un pericolo vicino (circa 90 metri)
 const SAFE_DISTANCE_THRESHOLD = 0.0009; 
 
 export default function MapScreen() {
@@ -173,17 +173,11 @@ export default function MapScreen() {
       results.forEach((json, index) => {
           if (json && json.code === 'Ok' && json.routes) {
               json.routes.forEach((r: any) => {
-                   // Aggiungiamo un ID univoco basato sulla geometria per evitare duplicati esatti
                    r._sourceIndex = index; 
-                   // Calcoliamo un hash semplice della geometria per rimuovere duplicati
-                   r._geoHash = r.geometry.coordinates.length + "_" + r.duration; 
                    allRoutes.push(r);
               });
           }
       });
-
-      // Rimuoviamo duplicati (spesso la via diretta e la deviazione leggera sono uguali)
-      //const uniqueRoutes = Array.from(new Map(allRoutes.map(item => [item._geoHash, item])).values());
 
       if (allRoutes.length === 0) {
         Alert.alert("Errore", "Impossibile trovare percorsi validi.");
@@ -220,7 +214,7 @@ export default function MapScreen() {
               lowestDangerCount = currentRouteDangerCount;
               bestRoute = route;
               bestRouteDistance = route.distance;
-              // Se la rotta scelta non è la prima della lista (che di solito è la diretta), è un'alternativa
+              // Se la rotta scelta non è la prima della lista, è un'alternativa
               isAlternativeSelected = (route !== allRoutes[0]);
           } 
           // A parità di pericoli, prendi la più breve

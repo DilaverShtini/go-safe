@@ -23,8 +23,7 @@ export default function GroupCard({
 }: GroupCardProps) {
   return (
     <View style={[
-      styles.card, 
-      // Se partecipi, il bordo diventa verde e un po' più spesso
+      styles.card,
       isJoined && styles.joinedCard 
     ]}>
       <View style={[styles.avatarContainer, { backgroundColor: color }]}>

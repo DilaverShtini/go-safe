@@ -14,7 +14,7 @@ import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-// --- DATI STATICI ---
+// DATI STATICI
 const DUMMY_CHATS = [
   { id: 'c1', user: 'Mario Rossi', lastMessage: 'Perfetto, ci vediamo domani.', time: '15:30', sortDate: '2025-11-26T15:30:00Z' },
   { id: 'c2', user: 'Anna Bianchi', lastMessage: 'Hai ricevuto il documento?', time: 'Ieri', sortDate: '2025-11-25T10:00:00Z' },
@@ -34,7 +34,7 @@ const MOCK_CONTACTS = [
   { id: 'u7', name: 'Supporto Clienti' },
 ];
 
-// --- COMPONENTE MODALE ---
+// COMPONENTE MODALE
 const CreateChatModal = ({ visible, onClose, onSelectContact }: any) => {
   const [searchText, setSearchText] = useState("");
 
@@ -91,7 +91,7 @@ const CreateChatModal = ({ visible, onClose, onSelectContact }: any) => {
   );
 };
 
-// --- SCHERMATA PRINCIPALE ---
+// SCHERMATA PRINCIPALE
 export default function ChatScreen() {
   const router = useRouter();
   const [isModalVisible, setModalVisible] = useState(false);
@@ -127,9 +127,7 @@ export default function ChatScreen() {
              activeOpacity={0.7}
              onPress={() => goToChat(item.id, item.user)}
            >
-             {/* AVATAR AGGIORNATO */}
              <View style={styles.avatarContainer}>
-                {/* Colore testo cambiato per contrasto col fondo chiaro */}
                 <Text style={{color: '#5E35B1', fontWeight: 'bold', fontSize: 18}}>
                     {item.user.charAt(0).toUpperCase()}
                 </Text>
@@ -175,12 +173,11 @@ const styles = StyleSheet.create({
   // Riga Chat
   chatContainer: { flexDirection: 'row', padding: 15, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#ccc', alignItems: 'center' },
   
-  // *** AVATAR AGGIORNATO QUI ***
   avatarContainer: { 
     width: 50, 
     height: 50, 
     borderRadius: 25, 
-    backgroundColor: '#F3E5F5', // <--- NUOVO COLORE SFONDO
+    backgroundColor: '#F3E5F5',
     marginRight: 15, 
     justifyContent: 'center', 
     alignItems: 'center' 
@@ -205,9 +202,9 @@ const styles = StyleSheet.create({
   modalListContent: { paddingHorizontal: 20, paddingBottom: 40 },
   contactRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", padding: 15, marginBottom: 10, borderRadius: 12, borderWidth: 1, borderColor: "#E0E0E0" },
   
-  // Avatar nel Modale (anche qui usiamo lo stesso stile per coerenza)
+
   contactAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: "#F3E5F5", justifyContent: "center", alignItems: "center", marginRight: 15 },
-  avatarText: { fontSize: 18, fontWeight: "bold", color: "#5E35B1" }, // Viola scuro
+  avatarText: { fontSize: 18, fontWeight: "bold", color: "#5E35B1" }, 
   
   contactInfo: { flex: 1 },
   contactName: { fontSize: 16, fontWeight: "600", color: "#333" },

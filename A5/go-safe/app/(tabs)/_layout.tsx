@@ -11,7 +11,7 @@ export default function Layout() {
         tabBarInactiveTintColor: "#999",
       }}
     >
-      {/* 1. MAPPA (index) */}
+      {/* MAPPA (index) */}
       <Tabs.Screen
         name="index"
         options={{
@@ -26,7 +26,7 @@ export default function Layout() {
         }}
       />
 
-      {/* 2. GRUPPI */}
+      {/* GRUPPI */}
       <Tabs.Screen
         name="groups"
         options={{
@@ -41,7 +41,7 @@ export default function Layout() {
         }}
       />
 
-      {/* 3. CHAT */}
+      {/* CHAT */}
       <Tabs.Screen
         name="chat"
         options={{
@@ -56,7 +56,7 @@ export default function Layout() {
         }}
       />
 
-      {/* 4. SOS */}
+      {/* SOS */}
       <Tabs.Screen
         name="sos"
         options={{

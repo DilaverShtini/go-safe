@@ -78,11 +78,10 @@ export default function ReportModal({ visible, onClose, onSubmit }: ReportModalP
                       { backgroundColor: selectedType === type.id ? type.color : "#f4f4f4" },
                     ]}
                   >
-                    {/* QUI ABBIAMO CAMBIATO IL COMPONENTE IN MaterialCommunityIcons */}
                     <MaterialCommunityIcons
                       // @ts-ignore
                       name={type.icon}
-                      size={28} // Leggermente più grande per MaterialIcons
+                      size={28}
                       color={selectedType === type.id ? "white" : "#555"}
                     />
                   </View>

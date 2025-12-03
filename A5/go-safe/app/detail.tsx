@@ -7,13 +7,15 @@ import {
   StyleSheet,
   Platform, 
   KeyboardAvoidingView, 
-  TouchableOpacity
+  TouchableOpacity,
+  ViewStyle,
+  TextStyle
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context'; 
 import { Ionicons } from '@expo/vector-icons';
 
-// --- Dati Fittizi Messaggi ---
+// Dati Fittizi Messaggi
 const DUMMY_MESSAGES = {
   c1: [
     { id: '1', text: 'Ciao Mario!', sender: 'me' },
@@ -60,8 +62,8 @@ const DUMMY_MESSAGES = {
   ],
 };
 
-// --- Stili Base per la Nuvoletta ---
-const BASE_BUBBLE_STYLE = {
+// Definiamo esplicitamente il tipo per evitare errori nello StyleSheet
+const BASE_BUBBLE_STYLE: ViewStyle = {
     marginVertical: 4, 
     padding: 10, 
     borderRadius: 15,
@@ -69,12 +71,14 @@ const BASE_BUBBLE_STYLE = {
 };
 
 export default function ChatDetailScreen() {
-  const { user, id } = useLocalSearchParams();
+  const { user, id } = useLocalSearchParams<{ user: string; id: string }>();
 
-  // Logica di ordinamento: ID più alti (nuovi) prima.
+  const chatId = Array.isArray(id) ? id[0] : id;
+
   const [messages, setMessages] = useState(() => {
-    // Se l'id non esiste (es. nuova chat creata dal modale), ritorna array vuoto
-    const rawMessages = DUMMY_MESSAGES[id] || [];
+    const rawMessages = (chatId && chatId in DUMMY_MESSAGES)
+      ? DUMMY_MESSAGES[chatId as keyof typeof DUMMY_MESSAGES] 
+      : [];
     return rawMessages.slice().sort((a, b) => parseInt(b.id) - parseInt(a.id));
   });
   
@@ -92,24 +96,21 @@ export default function ChatDetailScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       
-      {/* --- HEADER CON PULSANTE INDIETRO --- */}
+      {/* HEADER */}
       <View style={styles.headerContainer}>
-        {/* Pulsante Indietro */}
         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
            <Ionicons name="chevron-back" size={28} color="#007AFF" />
         </TouchableOpacity>
 
-        {/* Titolo */}
-        <Text style={styles.headerTitle}>{user}</Text>
+        <Text style={styles.headerTitle}>{user || 'Chat'}</Text>
 
-        {/* Placeholder vuoto per bilanciare il layout */}
         <View style={styles.headerButton} />
       </View>
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0} 
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20} 
       >
         <FlatList
           data={messages}
@@ -133,7 +134,6 @@ export default function ChatDetailScreen() {
             onChangeText={setInput}
             placeholder="Scrivi un messaggio..."
             multiline 
-            maxHeight={100} 
           />
           <TouchableOpacity
             style={[
@@ -155,12 +155,13 @@ const styles = StyleSheet.create({
   safeArea: { 
     flex: 1, 
     backgroundColor: '#fff' 
-  },
+  } as ViewStyle,
+
   keyboardAvoidingContainer: {
     flex: 1,
     paddingHorizontal: 10,
-  },
-  // --- STILI HEADER AGGIORNATI ---
+  } as ViewStyle,
+
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -170,39 +171,45 @@ const styles = StyleSheet.create({
     backgroundColor: '#f7f7f7', 
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#ccc',
-  },
+  } as ViewStyle,
+
   headerButton: {
     width: 40,
     alignItems: 'flex-start',
     justifyContent: 'center',
-  },
+  } as ViewStyle,
+
   headerTitle: { 
     fontSize: 18, 
     fontWeight: 'bold', 
     textAlign: 'center',
     flex: 1,
-  },
-  // ------------------------------
+  } as TextStyle,
+
   listContent: {
     paddingBottom: 10, 
     paddingTop: 10, 
-  },
+  } as ViewStyle,
+
   myBubble: { 
     ...BASE_BUBBLE_STYLE, 
     alignSelf: 'flex-end', 
     backgroundColor: '#DCF8C6', 
     borderBottomRightRadius: 2, 
-  },
+  } as ViewStyle,
+
   otherBubble: { 
     ...BASE_BUBBLE_STYLE, 
     alignSelf: 'flex-start', 
     backgroundColor: '#eee', 
     borderBottomLeftRadius: 2, 
-  },
+  } as ViewStyle,
+
   messageText: {
     fontSize: 16,
     color: '#000',
-  },
+  } as TextStyle,
+
   inputRow: { 
     flexDirection: 'row', 
     alignItems: 'flex-end', 
@@ -210,7 +217,8 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#ccc',
     backgroundColor: '#fff',
-  },
+  } as ViewStyle,
+
   input: { 
     flex: 1, 
     minHeight: 40, 
@@ -222,7 +230,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10, 
     marginRight: 8,
     fontSize: 16,
-  },
+  } as TextStyle,
+
   sendButton: {
     paddingHorizontal: 18,
     paddingVertical: 10,
@@ -230,10 +239,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
-  },
+  } as ViewStyle,
+
   sendButtonText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
-  },
+  } as TextStyle,
 });

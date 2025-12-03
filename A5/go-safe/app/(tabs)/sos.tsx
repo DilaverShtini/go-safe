@@ -8,11 +8,11 @@ import {
   Alert,
   Linking,
   Platform,
-  SafeAreaView,
   TextInput
 } from "react-native";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { Audio } from "expo-av";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface Contact {
   id: string;
@@ -32,10 +32,10 @@ export default function SosScreen() {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   
-  // 1. STATO PER LA RICERCA
+  // STATO PER LA RICERCA
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 2. LOGICA DI FILTRO
+  // LOGICA DI FILTRO
   const filteredContacts = MOCK_CONTACTS.filter((contact) => 
     contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     contact.phoneNumber.includes(searchQuery)
@@ -106,7 +106,7 @@ export default function SosScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>SOS & Emergenza</Text>
         
-        {/* 3. BARRA DI RICERCA */}
+        {/* BARRA DI RICERCA */}
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
           <TextInput

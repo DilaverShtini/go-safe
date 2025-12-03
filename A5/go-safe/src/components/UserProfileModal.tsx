@@ -7,13 +7,13 @@ import {
   TouchableOpacity, 
   ScrollView, 
   Image,
-  SafeAreaView,
   TextInput,
   Alert
 } from "react-native";
 import { MaterialCommunityIcons, Feather, FontAwesome } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-// --- Tipi di Dati ---
+// Tipi di Dati
 export interface Review {
   id: string;
   title: string;
@@ -60,7 +60,7 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
 
   if (!displayUser) return null;
 
-  // --- Funzione per renderizzare stelle statiche (sola lettura) ---
+  // Funzione per renderizzare stelle statiche (sola lettura)
   const renderStaticStars = (count: number, size: number = 20, color: string = "#333") => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -76,7 +76,7 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
     return <View style={{ flexDirection: 'row' }}>{stars}</View>;
   };
 
-  // --- Funzione per renderizzare stelle CLICCABILI (input) ---
+  // Funzione per renderizzare stelle CLICCABILI (input)
   const renderInteractiveStars = () => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -94,7 +94,7 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
     return <View style={{ flexDirection: 'row', marginBottom: 10 }}>{stars}</View>;
   };
 
-  // --- Gestione Invio Recensione ---
+  // Gestione Invio Recensione
   const handleSendReview = () => {
     if (newReviewText.trim() === "") {
         Alert.alert("Attenzione", "Scrivi un commento per la recensione.");
@@ -105,16 +105,14 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
         return;
     }
 
-    // 1. Creiamo il nuovo oggetto recensione
     const newReview: Review = {
-        id: Date.now().toString(), // ID temporaneo univoco
-        title: "La tua Recensione", // Titolo fisso o dinamico
-        tags: "@Tu", // Simuliamo il tag dell'utente corrente
+        id: Date.now().toString(),
+        title: "La tua Recensione",
+        tags: "@Tu",
         text: newReviewText,
         rating: newRating,
     };
 
-    // 2. Aggiorniamo lo stato locale aggiungendo la recensione in cima alla lista
     setDisplayUser(prev => {
         if (!prev) return null;
         return {
@@ -123,7 +121,6 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
         };
     });
 
-    // 3. Reset del form
     setNewReviewText("");
     setNewRating(0);
     setIsWritingReview(false);

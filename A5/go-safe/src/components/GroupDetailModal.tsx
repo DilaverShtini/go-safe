@@ -7,11 +7,11 @@ import {
   TouchableOpacity, 
   ScrollView, 
   Image,
-  SafeAreaView
 } from "react-native";
 import { MaterialCommunityIcons, Feather, Ionicons } from "@expo/vector-icons";
 
 import UserProfileModal, { UserProfile } from "./UserProfileModal";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // Definizione del tipo per il Gruppo
 interface GroupItem {
@@ -86,7 +86,7 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           
-          {/* --- HEADER --- */}
+          {/* HEADER */}
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose} style={styles.backButton}>
               <Feather name="arrow-left" size={26} color="#333" />
@@ -97,7 +97,7 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
 
           <ScrollView contentContainerStyle={styles.scrollContent}>
             
-            {/* --- SEZIONE PARTECIPANTI --- */}
+            {/* SEZIONE PARTECIPANTI */}
             <Text style={styles.sectionLabel}>Partecipanti</Text>
             
             {MOCK_PARTICIPANTS.map((participant) => (
@@ -118,7 +118,7 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
                 </View>
             ))}
 
-            {/* --- SEZIONE PARTENZA --- */}
+            {/* SEZIONE PARTENZA */}
             <Text style={styles.sectionLabel}>Partenza</Text>
 
             {/* Luogo */}
@@ -137,16 +137,16 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
               <Text style={styles.infoText}>{group.startTime}</Text>
             </View>
 
-            {/* --- BOTTONE ISCRIZIONE (Cambia stato se partecipi) --- */}
+            {/* BOTTONE ISCRIZIONE (Cambia stato se partecipi) */}
             <View style={styles.buttonContainer}>
                 {group.isJoined ? (
-                    // Cso: Utente partecipa già (Verde)
+                    // Utente partecipa già (Verde)
                     <View style={[styles.actionButton, styles.joinedButton]}>
                         <MaterialCommunityIcons name="check" size={20} color="white" style={{marginRight: 8}}/>
                         <Text style={styles.joinedButtonText}>Fai parte del gruppo</Text>
                     </View>
                 ) : (
-                    // Caso: Utente NON partecipa (Grigio/Viola)
+                    // Utente NON partecipa (Grigio/Viola)
                     <TouchableOpacity 
                         style={styles.actionButton} 
                         onPress={() => onJoin(group.id)} // Chiama la funzione per iscriversi
@@ -158,7 +158,7 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
 
           </ScrollView>
 
-          {/* --- MODALE PROFILO UTENTE (Nidificato) --- */}
+          {/* MODALE PROFILO UTENTE (Nidificato) */}
           <UserProfileModal 
             visible={isProfileVisible}
             user={selectedUser}
