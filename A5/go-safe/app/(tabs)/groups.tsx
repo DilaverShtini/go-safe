@@ -1,26 +1,52 @@
 import React, { useState } from "react";
-import { View, StyleSheet, FlatList, TouchableOpacity, StatusBar} from "react-native";
+import { 
+  View, 
+  StyleSheet, 
+  FlatList, 
+  TouchableOpacity, 
+  SafeAreaView, 
+  StatusBar,
+  Text 
+} from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import GroupCard from "../../src/components/GroupCard";
 import GroupsHeader from "../../src/components/GroupsHeader";
 import CreateGroupModal from "../../src/components/CreateGroupModal";
 import GroupDetailModal from "../../src/components/GroupDetailModal";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 interface GroupItem {
   id: string;
   name: string;
   startZone: string;
   startTime: string;
+  date: string; 
   initial: string;
   color?: string;
-  isJoined?: boolean; 
+  isJoined?: boolean;
 }
 
 const INITIAL_GROUPS: GroupItem[] = [
-  { id: "1", name: "Destinazione 1", startZone: "Milano Centrale", startTime: "20:30", initial: "A", color: "#E1BEE7", isJoined: false },
-  { id: "2", name: "Destinazione 2", startZone: "Piazza del Popolo", startTime: "23:00", initial: "B", color: "#E1BEE7", isJoined: false },
+  { 
+      id: "1", 
+      name: "Destinazione 1", 
+      startZone: "Milano Centrale", 
+      startTime: "20:30", 
+      date: "12/05/2025", 
+      initial: "A", 
+      color: "#E1BEE7", 
+      isJoined: false 
+  },
+  { 
+      id: "2", 
+      name: "Destinazione 2", 
+      startZone: "Piazza del Popolo", 
+      startTime: "23:00", 
+      date: "15/06/2025", 
+      initial: "B", 
+      color: "#E1BEE7", 
+      isJoined: false 
+  },
 ];
 
 export default function GroupsScreen() {
@@ -28,7 +54,23 @@ export default function GroupsScreen() {
   
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
   const [isDetailModalVisible, setDetailModalVisible] = useState(false);
+  
   const [selectedGroup, setSelectedGroup] = useState<GroupItem | null>(null);
+
+  const handleCreateGroup = (newGroupData: any) => {
+    const newGroup: GroupItem = {
+      id: Date.now().toString(),
+      name: newGroupData.name,
+      startZone: newGroupData.startZone,
+      startTime: newGroupData.startTime,
+      date: newGroupData.date, 
+      initial: newGroupData.initial,
+      color: "#E1BEE7",
+      isJoined: true, 
+    };
+    setGroups(prev => [...prev, newGroup]);
+    setCreateModalVisible(false);
+  };
 
   const handleJoinGroup = (groupId: string) => {
     const updatedGroups = groups.map(group => {
@@ -44,20 +86,6 @@ export default function GroupsScreen() {
     }
   };
 
-  const handleCreateGroup = (newGroupData: any) => {
-    const newGroup: GroupItem = {
-      id: Date.now().toString(),
-      name: newGroupData.name,
-      startZone: newGroupData.startZone,
-      startTime: newGroupData.startTime,
-      initial: newGroupData.initial,
-      color: "#E1BEE7",
-      isJoined: true,
-    };
-    setGroups(prev => [...prev, newGroup]);
-    setCreateModalVisible(false);
-  };
-
   const handleOpenDetail = (group: GroupItem) => {
     setSelectedGroup(group);
     setDetailModalVisible(true);
@@ -66,8 +94,11 @@ export default function GroupsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
+        
+        {/* Header Custom */}
         <GroupsHeader />
 
+        {/* Lista Gruppi */}
         <FlatList
           data={groups}
           keyExtractor={(item) => item.id}
@@ -75,10 +106,12 @@ export default function GroupsScreen() {
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => handleOpenDetail(item)} activeOpacity={0.9}>
+                {/* Card che mostra i dettagli nella lista */}
                 <GroupCard
                   name={item.name}
                   startZone={item.startZone}
                   startTime={item.startTime}
+                  date={item.date}
                   initial={item.initial}
                   color={item.color}
                   isJoined={item.isJoined}
@@ -86,8 +119,14 @@ export default function GroupsScreen() {
                 />
             </TouchableOpacity>
           )}
+          ListEmptyComponent={
+             <View style={{alignItems: 'center', marginTop: 50}}>
+                 <Text style={{color: '#999'}}>Nessun gruppo disponibile.</Text>
+             </View>
+          }
         />
 
+        {/* Bottone Flottante (+) */}
         <TouchableOpacity 
             style={styles.fab} 
             onPress={() => setCreateModalVisible(true)}
@@ -96,12 +135,14 @@ export default function GroupsScreen() {
           <MaterialCommunityIcons name="plus" size={32} color="#333" />
         </TouchableOpacity>
 
+        {/* Modal Creazione */}
         <CreateGroupModal 
           visible={isCreateModalVisible}
           onClose={() => setCreateModalVisible(false)}
           onSubmit={handleCreateGroup}
         />
 
+        {/* Modal Dettaglio */}
         <GroupDetailModal 
           visible={isDetailModalVisible}
           group={selectedGroup}
@@ -118,6 +159,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#F8F9FA",
+    paddingTop: StatusBar.currentHeight || 0,
   },
   container: {
     flex: 1,

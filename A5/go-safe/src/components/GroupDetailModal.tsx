@@ -7,30 +7,28 @@ import {
   TouchableOpacity, 
   ScrollView, 
   Image,
+  SafeAreaView
 } from "react-native";
 import { MaterialCommunityIcons, Feather, Ionicons } from "@expo/vector-icons";
 
 import UserProfileModal, { UserProfile } from "./UserProfileModal";
-import { SafeAreaView } from "react-native-safe-area-context";
 
-// Definizione del tipo per il Gruppo
 interface GroupItem {
   id: string;
   name: string;
   startZone: string;
   startTime: string;
+  date: string;
   isJoined?: boolean;
 }
 
-// Props che il componente accetta
 interface GroupDetailModalProps {
   visible: boolean;
   group: GroupItem | null;
   onClose: () => void;
-  onJoin: (groupId: string) => void; 
+  onJoin: (groupId: string) => void;
 }
 
-// Dati finti per i partecipanti (Mock)
 const MOCK_PARTICIPANTS: UserProfile[] = [
     {
         id: "u1",
@@ -68,17 +66,14 @@ const MOCK_PARTICIPANTS: UserProfile[] = [
 ];
 
 export default function GroupDetailModal({ visible, group, onClose, onJoin }: GroupDetailModalProps) {
-  // Stati per gestire l'apertura del profilo utente
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isProfileVisible, setProfileVisible] = useState(false);
 
-  // Funzione per aprire il profilo di un partecipante
   const handleOpenProfile = (user: UserProfile) => {
       setSelectedUser(user);
       setProfileVisible(true);
   };
 
-  // Se non c'è un gruppo selezionato, non mostrare nulla
   if (!group) return null;
 
   return (
@@ -86,7 +81,7 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           
-          {/* HEADER */}
+          {/*Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose} style={styles.backButton}>
               <Feather name="arrow-left" size={26} color="#333" />
@@ -97,7 +92,7 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
 
           <ScrollView contentContainerStyle={styles.scrollContent}>
             
-            {/* SEZIONE PARTECIPANTI */}
+            {/* Sezione Partecipanti */}
             <Text style={styles.sectionLabel}>Partecipanti</Text>
             
             {MOCK_PARTICIPANTS.map((participant) => (
@@ -108,7 +103,7 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
                   />
                   <Text style={styles.participantName}>{participant.name}</Text>
                   
-                  {/* Icona Occhio per aprire il profilo */}
+                  {/* Icona Occhio */}
                   <TouchableOpacity 
                     style={styles.eyeIcon} 
                     onPress={() => handleOpenProfile(participant)}
@@ -118,10 +113,10 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
                 </View>
             ))}
 
-            {/* SEZIONE PARTENZA */}
+            {/* Sezione Partenza */}
             <Text style={styles.sectionLabel}>Partenza</Text>
 
-            {/* Luogo */}
+            {/* 1. Luogo */}
             <View style={styles.infoCard}>
               <View style={styles.iconCircle}>
                 <Ionicons name="location-sharp" size={20} color="#5E35B1" />
@@ -129,7 +124,15 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
               <Text style={styles.infoText}>{group.startZone}</Text>
             </View>
 
-            {/* Orario */}
+            {/* 2. Data (Nuovo) */}
+            <View style={styles.infoCard}>
+              <View style={styles.iconCircle}>
+                <Feather name="calendar" size={20} color="#5E35B1" />
+              </View>
+              <Text style={styles.infoText}>{group.date}</Text>
+            </View>
+
+            {/* 3. Orario */}
             <View style={styles.infoCard}>
               <View style={styles.iconCircle}>
                 <Feather name="clock" size={20} color="#5E35B1" />
@@ -137,19 +140,17 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
               <Text style={styles.infoText}>{group.startTime}</Text>
             </View>
 
-            {/* BOTTONE ISCRIZIONE (Cambia stato se partecipi) */}
+            {/* Bottone Iscrizione */}
             <View style={styles.buttonContainer}>
                 {group.isJoined ? (
-                    // Utente partecipa già (Verde)
                     <View style={[styles.actionButton, styles.joinedButton]}>
                         <MaterialCommunityIcons name="check" size={20} color="white" style={{marginRight: 8}}/>
                         <Text style={styles.joinedButtonText}>Fai parte del gruppo</Text>
                     </View>
                 ) : (
-                    // Utente NON partecipa (Grigio/Viola)
                     <TouchableOpacity 
                         style={styles.actionButton} 
-                        onPress={() => onJoin(group.id)} // Chiama la funzione per iscriversi
+                        onPress={() => onJoin(group.id)}
                     >
                         <Text style={styles.actionButtonText}>Richiedi di partecipare</Text>
                     </TouchableOpacity>
@@ -158,7 +159,7 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
 
           </ScrollView>
 
-          {/* MODALE PROFILO UTENTE (Nidificato) */}
+          {/* Modale Profilo Utente */}
           <UserProfileModal 
             visible={isProfileVisible}
             user={selectedUser}
@@ -204,7 +205,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     fontWeight: "500",
   },
-  // Card Partecipante
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -236,7 +236,6 @@ const styles = StyleSheet.create({
   eyeIcon: {
     padding: 5,
   },
-  // Card Info (Luogo/Orario)
   infoCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -261,7 +260,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
   },
-  // Stili Bottone
   buttonContainer: {
     marginTop: 30,
     alignItems: "center",
@@ -287,9 +285,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
   },
-  // Stile Bottone "Partecipi"
   joinedButton: {
-    backgroundColor: "#4CAF50", // Verde Successo
+    backgroundColor: "#4CAF50",
     borderColor: "#388E3C",
   },
   joinedButtonText: {

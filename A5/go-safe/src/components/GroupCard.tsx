@@ -1,11 +1,12 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 
 interface GroupCardProps {
   name: string;
   startZone: string;
   startTime: string;
+  date: string;
   initial: string;
   color?: string;
   isJoined?: boolean;
@@ -15,21 +16,19 @@ interface GroupCardProps {
 export default function GroupCard({ 
   name, 
   startZone, 
-  startTime, 
+  startTime,
+  date,
   initial, 
   color = "#E1BEE7",
-  isJoined = false,
+  isJoined = false, 
   onPressEye 
 }: GroupCardProps) {
   return (
-    <View style={[
-      styles.card,
-      isJoined && styles.joinedCard 
-    ]}>
+    <View style={[styles.card, isJoined && styles.joinedCard]}>
+      
+      {/* Avatar */}
       <View style={[styles.avatarContainer, { backgroundColor: color }]}>
         <Text style={styles.avatarText}>{initial}</Text>
-        
-        {/* Badge di spunta se partecipi */}
         {isJoined && (
           <View style={styles.joinedBadge}>
             <MaterialCommunityIcons name="check" size={12} color="white" />
@@ -37,11 +36,28 @@ export default function GroupCard({
         )}
       </View>
 
+      {/* Info Centrali */}
       <View style={styles.infoContainer}>
-        <Text style={styles.groupName}>{name}</Text>
-        <Text style={styles.groupDetail}>{startZone}</Text>
-        <Text style={styles.groupDetail}>{startTime}</Text>
-        {/* Testo aggiuntivo opzionale */}
+        <Text style={styles.groupName} numberOfLines={1}>{name}</Text>
+        
+        {/* Luogo */}
+        <Text style={styles.groupDetail} numberOfLines={1}>
+            {startZone}
+        </Text>
+
+        {/* Riga Data e Ora con Icone */}
+        <View style={styles.dateTimeRow}>
+            <View style={styles.iconTextParams}>
+                <Feather name="calendar" size={14} color="#666" />
+                <Text style={styles.dateTimeText}>{date}</Text>
+            </View>
+            
+            <View style={[styles.iconTextParams, {marginLeft: 12}]}>
+                <Feather name="clock" size={14} color="#666" />
+                <Text style={styles.dateTimeText}>{startTime}</Text>
+            </View>
+        </View>
+
         {isJoined && <Text style={styles.joinedText}>Partecipi a questo gruppo</Text>}
       </View>
 
@@ -86,7 +102,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#5E35B1",
   },
-  // Badge sopra l'avatar
   joinedBadge: {
     position: 'absolute',
     bottom: 0,
@@ -113,7 +128,21 @@ const styles = StyleSheet.create({
   groupDetail: {
     fontSize: 14,
     color: "#666",
-    marginBottom: 2,
+    marginBottom: 6,
+  },
+  dateTimeRow: {
+      flexDirection: 'row',
+      alignItems: 'center'
+  },
+  iconTextParams: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4
+  },
+  dateTimeText: {
+      fontSize: 13,
+      color: '#555',
+      fontWeight: '500'
   },
   joinedText: {
     fontSize: 12,

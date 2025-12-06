@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { 
   View, 
   Text, 
@@ -8,9 +8,11 @@ import {
   TextInput, 
   ScrollView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Alert
 } from "react-native";
 import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 interface CreateGroupModalProps {
   visible: boolean;
@@ -19,36 +21,86 @@ interface CreateGroupModalProps {
 }
 
 export default function CreateGroupModal({ visible, onClose, onSubmit }: CreateGroupModalProps) {
-  // Stati per il form
   const [startLocation, setStartLocation] = useState("");
   const [endLocation, setEndLocation] = useState("");
-  const [dateText, setDateText] = useState("");
   
-  // Stati per l'orario
+  const [date, setDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  
   const [hour, setHour] = useState("20");
   const [minute, setMinute] = useState("00");
-  const [isAm, setIsAm] = useState(false); // false = PM
+  const [isAm, setIsAm] = useState(false);
+
+  const minuteInputRef = useRef<TextInput>(null);
+
+  const handleHourChange = (text: string) => {
+    const numericText = text.replace(/[^0-9]/g, '');
+    if (numericText.length > 0 && parseInt(numericText) > 12) {
+       if (numericText.length === 2) return; 
+    }
+    setHour(numericText);
+    if (numericText.length === 2) {
+      minuteInputRef.current?.focus();
+    }
+  };
+
+  const handleMinuteChange = (text: string) => {
+    const numericText = text.replace(/[^0-9]/g, '');
+    if (numericText.length > 0 && parseInt(numericText) > 59) return; 
+    setMinute(numericText);
+  };
+
+  const handleBlurHour = () => {
+      let val = parseInt(hour);
+      if (isNaN(val) || val === 0) setHour("12");
+      else if (val < 10) setHour(`0${val}`);
+  };
+
+  const handleBlurMinute = () => {
+      let val = parseInt(minute);
+      if (isNaN(val)) setMinute("00");
+      else if (val < 10) setMinute(`0${val}`);
+  };
+
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+
+    if (selectedDate) {
+      setDate(selectedDate);
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Mesi partono da 0
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
 
   const handleCreate = () => {
-    // Validazione base
     if (!startLocation || !endLocation) {
-      alert("Inserisci luogo di partenza e arrivo");
+      Alert.alert("Manca qualcosa", "Inserisci luogo di partenza e arrivo");
       return;
     }
 
     const newGroup = {
-      name: endLocation, // Usiamo la destinazione come nome principale
+      name: endLocation, 
       startZone: startLocation,
       startTime: `${hour}:${minute} ${isAm ? 'AM' : 'PM'}`,
-      date: dateText || "Oggi",
+      date: formatDate(date),
       initial: endLocation.charAt(0).toUpperCase(),
     };
 
     onSubmit(newGroup);
     
-    //Reset form
+    // Reset
     setStartLocation("");
     setEndLocation("");
+    setDate(new Date());
+    setHour("20");
+    setMinute("00");
     onClose();
   };
 
@@ -58,7 +110,7 @@ export default function CreateGroupModal({ visible, onClose, onSubmit }: CreateG
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           
           {/* Header */}
           <View style={styles.header}>
@@ -71,13 +123,12 @@ export default function CreateGroupModal({ visible, onClose, onSubmit }: CreateG
 
           {/* Inputs Luoghi */}
           <View style={styles.inputGroup}>
-            {/* Partenza */}
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Luogo di partenza</Text>
               <View style={styles.inputRow}>
                 <TextInput 
                   style={styles.textInput} 
-                  placeholder="Input" 
+                  placeholder="Es. Stazione Centrale" 
                   value={startLocation}
                   onChangeText={setStartLocation}
                 />
@@ -88,16 +139,13 @@ export default function CreateGroupModal({ visible, onClose, onSubmit }: CreateG
                 )}
               </View>
             </View>
-
             <View style={{ height: 10 }} />
-
-            {/* Arrivo */}
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Luogo di arrivo</Text>
               <View style={styles.inputRow}>
                 <TextInput 
                   style={styles.textInput} 
-                  placeholder="Input" 
+                  placeholder="Es. Piazza Duomo" 
                   value={endLocation}
                   onChangeText={setEndLocation}
                 />
@@ -110,70 +158,86 @@ export default function CreateGroupModal({ visible, onClose, onSubmit }: CreateG
             </View>
           </View>
 
-          {/* Sezione Data */}
+          {/* --- SEZIONE DATA CON CALENDARIO --- */}
           <View style={styles.cardSection}>
             <Text style={styles.sectionTitle}>Seleziona la data della partenza</Text>
             
             <View style={styles.dateDisplayRow}>
               <Text style={styles.bigDateText}>
-                {dateText ? dateText : "Seleziona la data"}
+                {formatDate(date)}
               </Text>
               <Feather name="calendar" size={24} color="#333" />
             </View>
 
-            {/* Input Data Mock */}
-            <View style={styles.dateInputBox}>
-              <Text style={styles.smallLabel}>Date</Text>
-              <TextInput 
-                style={styles.dateInput}
-                placeholder="mm/dd/yyyy"
-                value={dateText}
-                onChangeText={setDateText}
-              />
-            </View>
-            <TouchableOpacity>
-                <Text style={styles.actionLink}>Inserisci data</Text>
+            {/* Invece di un TextInput, usiamo un bottone che apre il calendario */}
+            <TouchableOpacity 
+                style={styles.dateInputBox} 
+                onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={styles.smallLabel}>Date (DD/MM/YYYY)</Text>
+              <Text style={styles.dateInputValue}>{formatDate(date)}</Text>
             </TouchableOpacity>
+
+            {/* Il Componente Calendario (Visibile solo quando showDatePicker è true o su iOS inline) */}
+            {showDatePicker && (
+              <DateTimePicker
+                testID="dateTimePicker"
+                value={date}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDateChange}
+                minimumDate={new Date()}
+                accentColor="#6C5CE7"
+                textColor="#333"
+              />
+            )}
+            
+            {/* Per iOS */}
+            {Platform.OS === 'ios' && showDatePicker && (
+                 <TouchableOpacity 
+                    style={{alignSelf: 'flex-end', marginTop: 10}} 
+                    onPress={() => setShowDatePicker(false)}
+                 >
+                    <Text style={{color: '#6C5CE7', fontWeight: 'bold'}}>Conferma Data</Text>
+                 </TouchableOpacity>
+            )}
+
           </View>
 
-          {/* Sezione Orario */}
+          {/* Sezione Orario (Invariata) */}
           <View style={styles.cardSection}>
             <Text style={styles.sectionTitle}>Scegli l'orario della partenza</Text>
-            
             <View style={styles.timeContainer}>
-              {/* Ore */}
               <View>
                 <View style={[styles.timeBox, styles.activeTimeBox]}>
                   <TextInput 
                     style={styles.timeText} 
                     value={hour} 
-                    onChangeText={setHour} 
-                    keyboardType="numeric" 
+                    onChangeText={handleHourChange}
+                    onBlur={handleBlurHour}
+                    keyboardType="number-pad"
                     maxLength={2}
+                    selectTextOnFocus
                   />
-                  {/* Cursore */}
-                  <View style={styles.cursor} />
                 </View>
                 <Text style={styles.timeLabel}>Hour</Text>
               </View>
-
               <Text style={styles.colon}>:</Text>
-
-              {/* Minuti */}
               <View>
                 <View style={styles.timeBox}>
                   <TextInput 
+                    ref={minuteInputRef}
                     style={styles.timeText} 
                     value={minute} 
-                    onChangeText={setMinute} 
-                    keyboardType="numeric" 
+                    onChangeText={handleMinuteChange} 
+                    onBlur={handleBlurMinute}
+                    keyboardType="number-pad"
                     maxLength={2}
+                    selectTextOnFocus
                   />
                 </View>
                 <Text style={styles.timeLabel}>Minute</Text>
               </View>
-
-              {/* AM/PM Switch */}
               <View style={styles.amPmContainer}>
                 <TouchableOpacity 
                   style={[styles.amPmButton, isAm && styles.amPmActive]}
@@ -190,16 +254,14 @@ export default function CreateGroupModal({ visible, onClose, onSubmit }: CreateG
                 </TouchableOpacity>
               </View>
             </View>
-
             <View style={styles.clockFooter}>
                 <MaterialCommunityIcons name="clock-time-four-outline" size={24} color="#555" />
-                <TouchableOpacity>
-                    <Text style={styles.actionLink}>Inserisci orario</Text>
-                </TouchableOpacity>
+                <Text style={{color: '#666', fontSize: 12}}>
+                    {hour}:{minute} {isAm ? 'AM' : 'PM'}
+                </Text>
             </View>
           </View>
 
-          {/* Bottone Finale Conferma */}
           <TouchableOpacity style={styles.createButton} onPress={handleCreate}>
             <Text style={styles.createButtonText}>Crea Gruppo</Text>
           </TouchableOpacity>
@@ -229,20 +291,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#333",
   },
-  inputGroup: {
-    marginBottom: 20,
-  },
+  inputGroup: { marginBottom: 20 },
   inputContainer: {
     backgroundColor: "#F3E5F5",
     borderRadius: 8,
     paddingHorizontal: 15,
     paddingVertical: 10,
   },
-  label: {
-    fontSize: 12,
-    color: "#777",
-    marginBottom: 4,
-  },
+  label: { fontSize: 12, color: "#777", marginBottom: 4 },
   inputRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -253,8 +309,8 @@ const styles = StyleSheet.create({
     color: "#333",
     fontWeight: "500",
     flex: 1,
+    padding: 0,
   },
-  // Card Sections (Date/Time)
   cardSection: {
     backgroundColor: "#F3E5F5",
     borderRadius: 20,
@@ -267,17 +323,13 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     fontWeight: "600",
   },
-  // Date Styles
   dateDisplayRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 15,
   },
-  bigDateText: {
-    fontSize: 24,
-    color: "#222",
-  },
+  bigDateText: { fontSize: 24, color: "#222" },
   dateInputBox: {
     borderWidth: 2,
     borderColor: "#6C5CE7",
@@ -291,17 +343,10 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     fontWeight: "bold",
   },
-  dateInput: {
+  dateInputValue: {
     fontSize: 16,
     color: "#333",
   },
-  actionLink: {
-    color: "#6C5CE7",
-    fontWeight: "bold",
-    textAlign: "right",
-    marginTop: 10,
-  },
-  // Time Styles
   timeContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -325,23 +370,11 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 32,
     color: "#333",
+    textAlign: 'center',
+    width: '100%',
   },
-  cursor: {
-    width: 2,
-    height: 30,
-    backgroundColor: "#6C5CE7",
-    marginLeft: 2,
-  },
-  timeLabel: {
-    fontSize: 12,
-    color: "#777",
-    marginTop: 5,
-  },
-  colon: {
-    fontSize: 40,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
+  timeLabel: { fontSize: 12, color: "#777", marginTop: 5, textAlign: 'center' },
+  colon: { fontSize: 40, fontWeight: "bold", marginBottom: 20 },
   amPmContainer: {
     backgroundColor: "#E0E0E0",
     borderRadius: 8,
@@ -354,24 +387,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: "transparent",
   },
-  amPmActive: {
-    backgroundColor: "#FFCDD2",
-  },
-  amPmText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#AAA",
-  },
+  amPmActive: { backgroundColor: "#FFCDD2" },
+  amPmText: { fontSize: 16, fontWeight: "bold", color: "#333" },
+  divider: { height: 1, backgroundColor: "#AAA" },
   clockFooter: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center'
   },
-  // Main Action Button
   createButton: {
     backgroundColor: "#6C5CE7",
     padding: 15,
