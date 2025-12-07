@@ -6,7 +6,8 @@ import {
   TouchableOpacity, 
   SafeAreaView, 
   StatusBar,
-  Text 
+  Text,
+  Alert 
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -24,6 +25,7 @@ interface GroupItem {
   initial: string;
   color?: string;
   isJoined?: boolean;
+  isOrganizer?: boolean;
 }
 
 const INITIAL_GROUPS: GroupItem[] = [
@@ -35,7 +37,8 @@ const INITIAL_GROUPS: GroupItem[] = [
       date: "12/05/2025", 
       initial: "A", 
       color: "#E1BEE7", 
-      isJoined: false 
+      isJoined: false,
+      isOrganizer: false
   },
   { 
       id: "2", 
@@ -45,7 +48,8 @@ const INITIAL_GROUPS: GroupItem[] = [
       date: "15/06/2025", 
       initial: "B", 
       color: "#E1BEE7", 
-      isJoined: false 
+      isJoined: false,
+      isOrganizer: false
   },
 ];
 
@@ -66,7 +70,8 @@ export default function GroupsScreen() {
       date: newGroupData.date, 
       initial: newGroupData.initial,
       color: "#E1BEE7",
-      isJoined: true, 
+      isJoined: true,     
+      isOrganizer: true, 
     };
     setGroups(prev => [...prev, newGroup]);
     setCreateModalVisible(false);
@@ -86,6 +91,33 @@ export default function GroupsScreen() {
     }
   };
 
+  const handleLeaveGroup = (groupId: string) => {
+    Alert.alert(
+        "Abbandona Gruppo",
+        "Sei sicuro di voler lasciare questo gruppo?",
+        [
+            { text: "Annulla", style: "cancel" },
+            { 
+                text: "Esci", 
+                style: "destructive",
+                onPress: () => {
+                    const updatedGroups = groups.map(group => {
+                        if (group.id === groupId) {
+                            return { ...group, isJoined: false };
+                        }
+                        return group;
+                    });
+                    setGroups(updatedGroups);
+
+                    if (selectedGroup && selectedGroup.id === groupId) {
+                        setSelectedGroup({ ...selectedGroup, isJoined: false });
+                    }
+                }
+            }
+        ]
+    );
+  };
+
   const handleOpenDetail = (group: GroupItem) => {
     setSelectedGroup(group);
     setDetailModalVisible(true);
@@ -95,10 +127,8 @@ export default function GroupsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         
-        {/* Header Custom */}
         <GroupsHeader />
 
-        {/* Lista Gruppi */}
         <FlatList
           data={groups}
           keyExtractor={(item) => item.id}
@@ -106,7 +136,6 @@ export default function GroupsScreen() {
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => handleOpenDetail(item)} activeOpacity={0.9}>
-                {/* Card che mostra i dettagli nella lista */}
                 <GroupCard
                   name={item.name}
                   startZone={item.startZone}
@@ -126,7 +155,6 @@ export default function GroupsScreen() {
           }
         />
 
-        {/* Bottone Flottante (+) */}
         <TouchableOpacity 
             style={styles.fab} 
             onPress={() => setCreateModalVisible(true)}
@@ -135,19 +163,18 @@ export default function GroupsScreen() {
           <MaterialCommunityIcons name="plus" size={32} color="#333" />
         </TouchableOpacity>
 
-        {/* Modal Creazione */}
         <CreateGroupModal 
           visible={isCreateModalVisible}
           onClose={() => setCreateModalVisible(false)}
           onSubmit={handleCreateGroup}
         />
 
-        {/* Modal Dettaglio */}
         <GroupDetailModal 
           visible={isDetailModalVisible}
           group={selectedGroup}
           onClose={() => setDetailModalVisible(false)}
           onJoin={handleJoinGroup}
+          onLeave={handleLeaveGroup}
         />
         
       </View>

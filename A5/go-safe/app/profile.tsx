@@ -47,10 +47,9 @@ export default function ProfileScreen() {
       return;
     }
 
-    // Apri fotocamera
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
-      aspect: [1, 1], // Quadrata per il profilo
+      aspect: [1, 1],
       quality: 0.5,
     });
 
@@ -63,8 +62,6 @@ export default function ProfileScreen() {
   const pickFromGallery = async () => {
     const permissionCheck = await ImagePicker.getMediaLibraryPermissionsAsync();
   
-    console.log("Stato permessi galleria:", permissionCheck.status);
-
     if (permissionCheck.status !== 'granted' && permissionCheck.canAskAgain) {
       const permissionRequest = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
@@ -80,9 +77,7 @@ export default function ProfileScreen() {
         return;
       }
     }
-    // Nota: Su Android 13+ potrebbe entrare qui anche senza popup espliciti grazie al Photo Picker
     
-    // Apri galleria
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -95,7 +90,7 @@ export default function ProfileScreen() {
     }
   };
 
-  // MENU DI SCELTA
+  // MENU DI SCELTA FOTO
   const handleProfileImagePress = () => {
     if (!isEditing) return;
 
@@ -248,6 +243,19 @@ export default function ProfileScreen() {
             </View>
           </View>
 
+          {/* --- NUOVO TASTO AIUTO & FAQ --- */}
+          <TouchableOpacity 
+            style={styles.helpButton} 
+            onPress={() => router.push("/faq")}
+            activeOpacity={0.8}
+          >
+            <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+                <Ionicons name="help-buoy-outline" size={24} color="#333" />
+                <Text style={styles.helpText}>Centro Assistenza & FAQ</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+          </TouchableOpacity>
+
           {/* TASTO LOGOUT */}
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={24} color="#e74c3c" />
@@ -265,7 +273,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
-
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -276,17 +283,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#eee"
   },
-
   headerTitle: {
     fontSize: 20,
     fontWeight: "bold",
     color: "#333",
   },
-
   iconButton: {
     padding: 5,
   },
-
   scrollContent: {
     padding: 20,
     paddingBottom: 50,
@@ -297,7 +301,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 25,
   },
-
   profileImage: {
     width: 120,
     height: 120,
@@ -305,13 +308,11 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: "#fff",
   },
-
   placeholderImage: {
     backgroundColor: "#e1e1e1",
     justifyContent: "center",
     alignItems: "center",
   },
-
   editBadge: {
     position: "absolute",
     bottom: 0,
@@ -325,12 +326,10 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: "#f8f9fa",
   },
-
   editActionLink: {
     marginTop: 15,
     padding: 10,
   },
-
   editActionText: {
     color: "#6c5ce7",
     fontWeight: "bold",
@@ -348,7 +347,6 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 2,
   },
-
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
@@ -360,14 +358,12 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: 15,
   },
-
   label: {
     fontSize: 14,
     color: "#888",
     marginBottom: 5,
     fontWeight: "500",
   },
-
   input: {
     fontSize: 16,
     color: "#333",
@@ -375,8 +371,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
-
-  // Stile quando in modifica
   inputEditable: {
     borderBottomColor: "#6c5ce7",
     backgroundColor: "#f4f4fa",
@@ -391,13 +385,32 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     gap: 15,
   },
-
   socialInput: {
     flex: 1,
     fontSize: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
     paddingVertical: 8,
+  },
+
+  // Help Button
+  helpButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 20,
+    shadowColor: "#000", 
+    shadowOpacity: 0.05, 
+    shadowRadius: 5, 
+    elevation: 2,
+  },
+  helpText: {
+      fontSize: 16,
+      fontWeight: "500",
+      color: "#333"
   },
 
   // Logout
@@ -411,9 +424,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#fadbd8",
     gap: 10,
-    marginTop: 10,
+    marginBottom: 20,
   },
-
   logoutText: {
     color: "#e74c3c",
     fontSize: 16,

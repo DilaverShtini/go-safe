@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   View, 
   Text, 
@@ -7,7 +7,9 @@ import {
   TouchableOpacity, 
   ScrollView, 
   Image,
-  SafeAreaView
+  SafeAreaView,
+  Animated,
+  Easing
 } from "react-native";
 import { MaterialCommunityIcons, Feather, Ionicons } from "@expo/vector-icons";
 
@@ -20,6 +22,7 @@ interface GroupItem {
   startTime: string;
   date: string;
   isJoined?: boolean;
+  isOrganizer?: boolean;
 }
 
 interface GroupDetailModalProps {
@@ -27,47 +30,66 @@ interface GroupDetailModalProps {
   group: GroupItem | null;
   onClose: () => void;
   onJoin: (groupId: string) => void;
+  onLeave: (groupId: string) => void;
+  // onDelete rimosso
 }
+
+const CURRENT_USER_PROFILE: UserProfile = {
+    id: "me",
+    name: "Mario Rossi",
+    avatarUrl: "https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg",
+    isVerified: true,
+    connections: 50,
+    trips: 10,
+    rating: 5.0,
+    reviews: []
+};
 
 const MOCK_PARTICIPANTS: UserProfile[] = [
     {
         id: "u1",
-        name: "Persona 1",
+        name: "Luigi Verdi",
         avatarUrl: "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg",
         isVerified: true,
         connections: 7,
         trips: 3,
         rating: 4.5,
-        reviews: [
-            { id: "r1", title: "Viaggio piacevole", tags: "@Persona2", text: "Compagnia ottima, puntuale.", rating: 5 },
-            { id: "r2", title: "Tutto ok", tags: "@Persona4", text: "Viaggio tranquillo.", rating: 4 },
-        ]
+        reviews: [ { id: "r1", title: "Viaggio piacevole", tags: "@Mario", text: "Compagnia ottima.", rating: 5 } ]
     },
     {
         id: "u2",
-        name: "Persona 2",
-        avatarUrl: "https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg",
+        name: "Giulia Neri",
+        avatarUrl: "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671122.jpg",
         isVerified: false,
         connections: 2,
         trips: 1,
         rating: 4,
         reviews: []
-    },
-    {
-        id: "u3",
-        name: "Persona 3",
-        avatarUrl: "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671122.jpg",
-        isVerified: true,
-        connections: 12,
-        trips: 8,
-        rating: 5,
-        reviews: []
     }
 ];
 
-export default function GroupDetailModal({ visible, group, onClose, onJoin }: GroupDetailModalProps) {
+export default function GroupDetailModal({ visible, group, onClose, onJoin, onLeave }: GroupDetailModalProps) {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isProfileVisible, setProfileVisible] = useState(false);
+
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (visible && group && !group.isJoined) {
+        startPulseAnimation();
+    } else {
+        scaleAnim.setValue(1);
+    }
+  }, [visible, group]);
+
+  const startPulseAnimation = () => {
+      Animated.loop(
+        Animated.sequence([
+            Animated.timing(scaleAnim, { toValue: 1.05, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+            Animated.timing(scaleAnim, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
+        ])
+      ).start();
+  };
 
   const handleOpenProfile = (user: UserProfile) => {
       setSelectedUser(user);
@@ -76,12 +98,15 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
 
   if (!group) return null;
 
+  const participantsList = group.isJoined 
+      ? [CURRENT_USER_PROFILE, ...MOCK_PARTICIPANTS] 
+      : MOCK_PARTICIPANTS;
+
   return (
     <Modal animationType="slide" visible={visible} onRequestClose={onClose}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           
-          {/*Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose} style={styles.backButton}>
               <Feather name="arrow-left" size={26} color="#333" />
@@ -92,31 +117,32 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
 
           <ScrollView contentContainerStyle={styles.scrollContent}>
             
-            {/* Sezione Partecipanti */}
-            <Text style={styles.sectionLabel}>Partecipanti</Text>
+            <Text style={styles.sectionLabel}>
+                Partecipanti ({participantsList.length})
+            </Text>
             
-            {MOCK_PARTICIPANTS.map((participant) => (
-                <View key={participant.id} style={styles.card}>
-                  <Image 
-                    source={{ uri: participant.avatarUrl }} 
-                    style={styles.avatar} 
-                  />
-                  <Text style={styles.participantName}>{participant.name}</Text>
-                  
-                  {/* Icona Occhio */}
-                  <TouchableOpacity 
-                    style={styles.eyeIcon} 
-                    onPress={() => handleOpenProfile(participant)}
-                  >
-                    <MaterialCommunityIcons name="eye-outline" size={28} color="black" />
-                  </TouchableOpacity>
-                </View>
-            ))}
+            {participantsList.map((participant) => {
+                const isMe = participant.id === 'me';
+                return (
+                    <View key={participant.id} style={[styles.card, isMe && styles.myCard]}>
+                      <Image source={{ uri: participant.avatarUrl }} style={styles.avatar} />
+                      <View style={{flex: 1, marginLeft: 15}}>
+                          <Text style={styles.participantName}>{participant.name} {isMe && "(Tu)"}</Text>
+                          {isMe && (
+                              <Text style={{fontSize: 12, color: '#6C5CE7', fontWeight: '500'}}>
+                                  {group.isOrganizer ? "Organizzatore" : "Partecipante"}
+                              </Text>
+                          )}
+                      </View>
+                      <TouchableOpacity style={styles.eyeIcon} onPress={() => handleOpenProfile(participant)}>
+                        <MaterialCommunityIcons name="eye-outline" size={28} color="black" />
+                      </TouchableOpacity>
+                    </View>
+                );
+            })}
 
-            {/* Sezione Partenza */}
-            <Text style={styles.sectionLabel}>Partenza</Text>
+            <Text style={styles.sectionLabel}>Dettagli Partenza</Text>
 
-            {/* 1. Luogo */}
             <View style={styles.infoCard}>
               <View style={styles.iconCircle}>
                 <Ionicons name="location-sharp" size={20} color="#5E35B1" />
@@ -124,7 +150,6 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
               <Text style={styles.infoText}>{group.startZone}</Text>
             </View>
 
-            {/* 2. Data (Nuovo) */}
             <View style={styles.infoCard}>
               <View style={styles.iconCircle}>
                 <Feather name="calendar" size={20} color="#5E35B1" />
@@ -132,7 +157,6 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
               <Text style={styles.infoText}>{group.date}</Text>
             </View>
 
-            {/* 3. Orario */}
             <View style={styles.infoCard}>
               <View style={styles.iconCircle}>
                 <Feather name="clock" size={20} color="#5E35B1" />
@@ -140,26 +164,31 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
               <Text style={styles.infoText}>{group.startTime}</Text>
             </View>
 
-            {/* Bottone Iscrizione */}
             <View style={styles.buttonContainer}>
                 {group.isJoined ? (
-                    <View style={[styles.actionButton, styles.joinedButton]}>
+                    // Se sei iscritto (Organizzatore o Partecipante), vedi sempre il tasto verde per uscire
+                    <TouchableOpacity 
+                        style={[styles.actionButton, styles.joinedButton]}
+                        onPress={() => onLeave(group.id)}
+                    >
                         <MaterialCommunityIcons name="check" size={20} color="white" style={{marginRight: 8}}/>
                         <Text style={styles.joinedButtonText}>Fai parte del gruppo</Text>
-                    </View>
+                        <Text style={styles.leaveHintText}>(Tocca per uscire)</Text>
+                    </TouchableOpacity>
                 ) : (
-                    <TouchableOpacity 
-                        style={styles.actionButton} 
+                    <AnimatedTouchableOpacity 
+                        style={[styles.actionButton, { transform: [{ scale: scaleAnim }] }]} 
                         onPress={() => onJoin(group.id)}
+                        activeOpacity={0.8}
                     >
                         <Text style={styles.actionButtonText}>Richiedi di partecipare</Text>
-                    </TouchableOpacity>
+                        <MaterialCommunityIcons name="arrow-right" size={20} color="#333" style={{marginLeft: 8}}/>
+                    </AnimatedTouchableOpacity>
                 )}
             </View>
 
           </ScrollView>
 
-          {/* Modale Profilo Utente */}
           <UserProfileModal 
             visible={isProfileVisible}
             user={selectedUser}
@@ -172,103 +201,32 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin }: Gr
   );
 }
 
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#F8F9FA",
-  },
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
+  safeArea: { flex: 1, backgroundColor: "#F8F9FA" },
+  container: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 15 },
   backButton: { padding: 5 },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  sectionLabel: {
-    textAlign: "center",
-    fontSize: 14,
-    color: "#666",
-    marginTop: 20,
-    marginBottom: 10,
-    fontWeight: "500",
-  },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  avatar: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
-    backgroundColor: "#EEE",
-  },
-  participantName: {
-    flex: 1,
-    marginLeft: 15,
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-  },
-  eyeIcon: {
-    padding: 5,
-  },
-  infoCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#D1C4E9",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 15,
-  },
-  infoText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-  },
-  buttonContainer: {
-    marginTop: 30,
-    alignItems: "center",
-  },
+  headerTitle: { fontSize: 20, fontWeight: "bold", color: "#333" },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
+  sectionLabel: { textAlign: "center", fontSize: 14, color: "#666", marginTop: 20, marginBottom: 10, fontWeight: "500" },
+  card: { flexDirection: "row", alignItems: "center", backgroundColor: "white", borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } },
+  myCard: { borderColor: "#6C5CE7", backgroundColor: "#F3E5F5" },
+  avatar: { width: 45, height: 45, borderRadius: 22.5, backgroundColor: "#EEE" },
+  participantName: { fontSize: 16, fontWeight: "600", color: "#333" },
+  eyeIcon: { padding: 5 },
+  infoCard: { flexDirection: "row", alignItems: "center", backgroundColor: "white", borderRadius: 12, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: "#E0E0E0" },
+  iconCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#D1C4E9", justifyContent: "center", alignItems: "center", marginRight: 15 },
+  infoText: { fontSize: 16, fontWeight: "600", color: "#333" },
+  
+  buttonContainer: { marginTop: 30, alignItems: "center" },
+  
   actionButton: {
     backgroundColor: "#F3E5F5",
     paddingVertical: 15,
     paddingHorizontal: 40,
-    borderRadius: 10,
+    borderRadius: 30,
     borderWidth: 1,
     borderColor: "#DDD",
     width: "100%",
@@ -280,18 +238,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center'
   },
-  actionButtonText: {
-    color: "#333",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  joinedButton: {
-    backgroundColor: "#4CAF50",
-    borderColor: "#388E3C",
-  },
-  joinedButtonText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 16
-  }
+  actionButtonText: { color: "#333", fontWeight: "bold", fontSize: 16 },
+  
+  joinedButton: { backgroundColor: "#4CAF50", borderColor: "#388E3C", flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
+  joinedButtonText: { color: "white", fontWeight: "bold", fontSize: 16 },
+  leaveHintText: { color: "rgba(255,255,255,0.8)", fontSize: 12, marginLeft: 8, fontStyle: 'italic', fontWeight: 'normal' },
 });

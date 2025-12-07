@@ -1,7 +1,5 @@
-// src/components/ChatListRow.tsx
 import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
 interface ChatListRowProps {
   item: { user: string; time: string; lastMessage: string };
@@ -12,7 +10,6 @@ export default function ChatListRow({ item, onPress }: ChatListRowProps) {
   return (
     <TouchableOpacity style={styles.chatContainer} activeOpacity={0.7} onPress={onPress}>
       <View style={styles.avatarContainer}>
-        {/* Mostra Iniziale */}
         <Text style={styles.avatarText}>
             {item.user.charAt(0).toUpperCase()}
         </Text>
@@ -32,18 +29,25 @@ export default function ChatListRow({ item, onPress }: ChatListRowProps) {
 }
 
 const styles = StyleSheet.create({
-  chatContainer: { flexDirection: 'row', padding: 15, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#ccc', alignItems: 'center', backgroundColor: '#fff' },
+  chatContainer: { 
+    flexDirection: 'row', 
+    padding: 15, 
+    borderBottomWidth: StyleSheet.hairlineWidth, 
+    borderBottomColor: '#ccc', 
+    alignItems: 'center', 
+    backgroundColor: '#fff' 
+  },
   avatarContainer: { 
     width: 50, 
     height: 50, 
     borderRadius: 25, 
-    backgroundColor: '#F3E5F5', // nuovo colore
+    backgroundColor: '#F3E5F5', 
     marginRight: 15, 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
   avatarText: { 
-    color: '#111', // nero
+    color: '#5E35B1', 
     fontWeight: 'bold', 
     fontSize: 18 
   },
