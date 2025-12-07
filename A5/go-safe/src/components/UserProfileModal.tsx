@@ -13,7 +13,6 @@ import {
 import { MaterialCommunityIcons, Feather, FontAwesome } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Tipi di Dati
 export interface Review {
   id: string;
   title: string;
@@ -40,15 +39,11 @@ interface UserProfileModalProps {
 }
 
 export default function UserProfileModal({ visible, user, onClose }: UserProfileModalProps) {
-  // Stato locale per visualizzare l'utente e aggiornarlo quando aggiungi recensioni
   const [displayUser, setDisplayUser] = useState<UserProfile | null>(null);
-  
-  // Stati per il form della nuova recensione
   const [isWritingReview, setIsWritingReview] = useState(false);
   const [newReviewText, setNewReviewText] = useState("");
-  const [newRating, setNewRating] = useState(0); // Voto selezionato dall'utente
+  const [newRating, setNewRating] = useState(0);
 
-  // Ogni volta che cambia l'utente (o si apre il modale), resetto lo stato locale
   useEffect(() => {
     if (user) {
       setDisplayUser(user);
@@ -60,7 +55,9 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
 
   if (!displayUser) return null;
 
-  // Funzione per renderizzare stelle statiche (sola lettura)
+  // CONTROLLO SE È IL MIO PROFILO PER NASCONDERE LA SEZIONE RECENSIONI
+  const isOwnProfile = displayUser.id === 'me';
+
   const renderStaticStars = (count: number, size: number = 20, color: string = "#333") => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -76,7 +73,6 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
     return <View style={{ flexDirection: 'row' }}>{stars}</View>;
   };
 
-  // Funzione per renderizzare stelle CLICCABILI (input)
   const renderInteractiveStars = () => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -94,7 +90,6 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
     return <View style={{ flexDirection: 'row', marginBottom: 10 }}>{stars}</View>;
   };
 
-  // Gestione Invio Recensione
   const handleSendReview = () => {
     if (newReviewText.trim() === "") {
         Alert.alert("Attenzione", "Scrivi un commento per la recensione.");
@@ -117,15 +112,13 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
         if (!prev) return null;
         return {
             ...prev,
-            reviews: [newReview, ...prev.reviews] // Aggiunge in testa
+            reviews: [newReview, ...prev.reviews]
         };
     });
 
     setNewReviewText("");
     setNewRating(0);
     setIsWritingReview(false);
-    
-    // In un'app reale qui chiamata API per salvare nel DB
   };
 
   return (
@@ -150,13 +143,14 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
               
               <View style={styles.profileInfoRight}>
                 <View style={styles.nameRow}>
-                  <Text style={styles.userName}>{displayUser.name}</Text>
+                  <Text style={styles.userName}>
+                      {displayUser.name} {isOwnProfile && "(Tu)"}
+                  </Text>
                   {displayUser.isVerified && (
                     <MaterialCommunityIcons name="check-decagram-outline" size={28} color="#333" style={{marginLeft: 8}} />
                   )}
                 </View>
 
-                {/* Stats */}
                 <View style={styles.statsContainer}>
                    <View style={styles.statItem}>
                       <Text style={styles.statLabel}>Collegamenti</Text>
@@ -188,48 +182,53 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
 
             <View style={styles.sectionDivider} />
 
-            {/* Sezione Aggiungi Recensione */}
-            <View style={styles.addReviewSection}>
-                {!isWritingReview ? (
-                    <TouchableOpacity style={styles.addButton} onPress={() => setIsWritingReview(true)}>
-                        <Text style={styles.addButtonText}>Scrivi una recensione</Text>
-                    </TouchableOpacity>
-                ) : (
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.writeLabel}>Valuta la tua esperienza con {displayUser.name}:</Text>
-                        
-                        {/* Selettore Stelle Interattivo */}
-                        <View style={{alignItems: 'center', marginBottom: 10}}>
-                            {renderInteractiveStars()}
-                            <Text style={{fontSize: 12, color: '#888'}}>
-                                {newRating > 0 ? `${newRating} su 5 stelle` : "Tocca le stelle per votare"}
-                            </Text>
-                        </View>
+            {/* SEZIONE AGGIUNGI RECENSIONE */}
+            {!isOwnProfile && (
+                <View style={styles.addReviewSection}>
+                    {!isWritingReview ? (
+                        <TouchableOpacity style={styles.addButton} onPress={() => setIsWritingReview(true)}>
+                            <Text style={styles.addButtonText}>Scrivi una recensione</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.writeLabel}>Valuta la tua esperienza con {displayUser.name}:</Text>
+                            
+                            <View style={{alignItems: 'center', marginBottom: 10}}>
+                                {renderInteractiveStars()}
+                                <Text style={{fontSize: 12, color: '#888'}}>
+                                    {newRating > 0 ? `${newRating} su 5 stelle` : "Tocca le stelle per votare"}
+                                </Text>
+                            </View>
 
-                        <TextInput 
-                            style={styles.textInput}
-                            multiline
-                            placeholder="Scrivi qui la tua esperienza..."
-                            value={newReviewText}
-                            onChangeText={setNewReviewText}
-                        />
-                        <View style={styles.formButtons}>
-                            <TouchableOpacity onPress={() => setIsWritingReview(false)}>
-                                <Text style={styles.cancelText}>Annulla</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.submitButton} onPress={handleSendReview}>
-                                <Text style={styles.submitText}>Invia Recensione</Text>
-                            </TouchableOpacity>
+                            <TextInput 
+                                style={styles.textInput}
+                                multiline
+                                placeholder="Scrivi qui la tua esperienza..."
+                                value={newReviewText}
+                                onChangeText={setNewReviewText}
+                            />
+                            <View style={styles.formButtons}>
+                                <TouchableOpacity onPress={() => setIsWritingReview(false)}>
+                                    <Text style={styles.cancelText}>Annulla</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.submitButton} onPress={handleSendReview}>
+                                    <Text style={styles.submitText}>Invia Recensione</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                    </View>
-                )}
-            </View>
+                    )}
+                </View>
+            )}
 
             {/* Lista Esperienze / Recensioni */}
             <View style={styles.reviewsList}>
+                <Text style={styles.sectionTitle}>
+                    Dicono di {isOwnProfile ? "te" : displayUser.name.split(" ")[0]}
+                </Text>
+
                 {displayUser.reviews.length === 0 && (
-                    <Text style={{textAlign: 'center', color: '#999', marginTop: 20}}>
-                        Nessuna recensione ancora. Sii il primo!
+                    <Text style={{textAlign: 'center', color: '#999', marginTop: 20, fontStyle: 'italic'}}>
+                        Nessuna recensione ancora.
                     </Text>
                 )}
 
@@ -237,7 +236,6 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
                     <View key={review.id} style={styles.reviewCard}>
                         <View style={styles.reviewHeader}>
                             <Text style={styles.reviewTitle}>{review.title}</Text>
-                            {/* Qui usiamo le stelle statiche piccole per mostrare il voto salvato */}
                             {renderStaticStars(review.rating, 16, "#555")}
                         </View>
                         <Text style={styles.reviewTags}>{review.tags}</Text>
@@ -278,7 +276,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
-  // Profilo
   profileHeader: {
     flexDirection: "row",
     paddingHorizontal: 20,
@@ -304,7 +301,8 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333'
+    color: '#333',
+    flexShrink: 1
   },
   statsContainer: {
     flexDirection: 'row',
@@ -350,9 +348,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 20
   },
-  // Lista Recensioni
   reviewsList: {
     paddingHorizontal: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333'
   },
   reviewCard: {
     marginBottom: 20,
@@ -383,10 +386,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEE',
     marginTop: 15
   },
-  // Aggiungi Recensione
   addReviewSection: {
       paddingHorizontal: 20,
-      marginBottom: 20,
+      marginBottom: 30, 
       alignItems: 'center'
   },
   addButton: {

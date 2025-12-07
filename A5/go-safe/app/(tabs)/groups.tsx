@@ -7,7 +7,6 @@ import {
   SafeAreaView, 
   StatusBar,
   Text,
-  Alert 
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -15,6 +14,7 @@ import GroupCard from "../../src/components/GroupCard";
 import GroupsHeader from "../../src/components/GroupsHeader";
 import CreateGroupModal from "../../src/components/CreateGroupModal";
 import GroupDetailModal from "../../src/components/GroupDetailModal";
+import ConfirmationModal from "../../src/components/ConfirmationModal";
 
 interface GroupItem {
   id: string;
@@ -58,8 +58,12 @@ export default function GroupsScreen() {
   
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
   const [isDetailModalVisible, setDetailModalVisible] = useState(false);
-  
   const [selectedGroup, setSelectedGroup] = useState<GroupItem | null>(null);
+
+  const [isConfirmVisible, setConfirmVisible] = useState(false);
+  const [groupToLeaveId, setGroupToLeaveId] = useState<string | null>(null);
+  
+  const [groupToLeaveName, setGroupToLeaveName] = useState<string>("");
 
   const handleCreateGroup = (newGroupData: any) => {
     const newGroup: GroupItem = {
@@ -91,31 +95,34 @@ export default function GroupsScreen() {
     }
   };
 
-  const handleLeaveGroup = (groupId: string) => {
-    Alert.alert(
-        "Abbandona Gruppo",
-        "Sei sicuro di voler lasciare questo gruppo?",
-        [
-            { text: "Annulla", style: "cancel" },
-            { 
-                text: "Esci", 
-                style: "destructive",
-                onPress: () => {
-                    const updatedGroups = groups.map(group => {
-                        if (group.id === groupId) {
-                            return { ...group, isJoined: false };
-                        }
-                        return group;
-                    });
-                    setGroups(updatedGroups);
+  const handleLeaveRequest = (groupId: string) => {
+      const groupFound = groups.find(g => g.id === groupId);
+      const groupName = groupFound ? groupFound.name : "questo gruppo";
 
-                    if (selectedGroup && selectedGroup.id === groupId) {
-                        setSelectedGroup({ ...selectedGroup, isJoined: false });
-                    }
-                }
-            }
-        ]
-    );
+      setGroupToLeaveId(groupId);
+      setGroupToLeaveName(groupName); 
+      setConfirmVisible(true);
+  };
+
+  const confirmLeaveGroup = () => {
+    if (!groupToLeaveId) return;
+
+    const updatedGroups = groups.map(group => {
+        if (group.id === groupToLeaveId) {
+            return { ...group, isJoined: false };
+        }
+        return group;
+    });
+    setGroups(updatedGroups);
+
+    if (selectedGroup && selectedGroup.id === groupToLeaveId) {
+        setSelectedGroup({ ...selectedGroup, isJoined: false });
+    }
+    
+    // Reset quando abbandoniamo il gruppo
+    setConfirmVisible(false);
+    setGroupToLeaveId(null);
+    setGroupToLeaveName("");
   };
 
   const handleOpenDetail = (group: GroupItem) => {
@@ -163,6 +170,7 @@ export default function GroupsScreen() {
           <MaterialCommunityIcons name="plus" size={32} color="#333" />
         </TouchableOpacity>
 
+        {/* MODALI */}
         <CreateGroupModal 
           visible={isCreateModalVisible}
           onClose={() => setCreateModalVisible(false)}
@@ -174,7 +182,18 @@ export default function GroupsScreen() {
           group={selectedGroup}
           onClose={() => setDetailModalVisible(false)}
           onJoin={handleJoinGroup}
-          onLeave={handleLeaveGroup}
+          onLeave={handleLeaveRequest}
+        />
+
+        <ConfirmationModal 
+            visible={isConfirmVisible}
+            title="Abbandona Gruppo"
+            message={`Sei sicuro di voler abbandonare il gruppo: "${groupToLeaveName}"?`}
+            confirmText="Abbandona"
+            cancelText="Annulla"
+            isDestructive={true}
+            onConfirm={confirmLeaveGroup}
+            onCancel={() => setConfirmVisible(false)}
         />
         
       </View>
