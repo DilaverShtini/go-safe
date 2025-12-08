@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Modal,
   View,
@@ -10,35 +10,88 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  Animated,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const REPORT_TYPES = [
-  { id: "danger", label: "Pericolo", icon: "alert-octagon", color: "#e74c3c" }, // Icona ottagonale di pericolo
-  { id: "darkness", label: "Buio", icon: "lightbulb-off", color: "#34495e" }, // Lampadina spenta
-  { id: "desolate", label: "Strada desolata", icon: "road-variant", color: "#e67e22" }, // Icona strada
-  { id: "stray", label: "Animali randagi", icon: "dog-side", color: "#6c5ce7" }, // Cane di profilo
-  { id: "suspicious", label: "Sospetto", icon: "account-alert", color: "#8d6e63" }, // Sagoma uomo con !
-  { id: "weather", label: "Allerta meteo", icon: "weather-lightning-rainy", color: "#3498db" }, // Temporale
+  { id: "danger", label: "Pericolo", icon: "alert-octagon", color: "#e74c3c" },
+  { id: "darkness", label: "Buio", icon: "lightbulb-off", color: "#34495e" },
+  { id: "desolate", label: "Strada desolata", icon: "road-variant", color: "#e67e22" },
+  { id: "stray", label: "Animali randagi", icon: "dog-side", color: "#6c5ce7" },
+  { id: "suspicious", label: "Sospetto", icon: "account-alert", color: "#8d6e63" },
+  { id: "weather", label: "Allerta meteo", icon: "weather-lightning-rainy", color: "#3498db" },
 ];
 
 interface ReportModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (type: string, note: string) => void;
+  onUndo?: () => void;
 }
 
-export default function ReportModal({ visible, onClose, onSubmit }: ReportModalProps) {
+export default function ReportModal({ visible, onClose, onSubmit, onUndo }: ReportModalProps) {
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [note, setNote] = useState("");
+
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+
+  const timerRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!visible) {
+      setShowSuccessToast(false);
+      setSelectedType(null);
+      setNote("");
+    }
+  }, [visible]);
 
   const handleSubmit = () => {
     if (selectedType) {
       onSubmit(selectedType, note);
+
+      setShowSuccessToast(true);
+
       setSelectedType(null);
       setNote("");
+      Keyboard.dismiss();
+
+      timerRef.current = setTimeout(() => {
+        setShowSuccessToast(false);
+        onClose();
+      }, 3000); 
     }
   };
+
+  const handleUndoPress = () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      
+      if (onUndo) onUndo();
+
+      setShowSuccessToast(false);
+      onClose(); 
+  };
+
+  if (showSuccessToast) {
+    return (
+      <Modal animationType="fade" transparent={true} visible={true} onRequestClose={() => {}}>
+        <View style={styles.toastOverlayContainer}>
+            <View style={styles.undoToast}>
+                <View style={styles.toastContent}>
+                    <MaterialCommunityIcons name="check-circle" size={24} color="#4CAF50" />
+                    <Text style={styles.undoToastText}>Segnalazione inviata</Text>
+                </View>
+
+                {onUndo && (
+                  <TouchableOpacity onPress={handleUndoPress} style={styles.undoButton}>
+                      <Text style={styles.undoButtonText}>ANNULLA</Text>
+                  </TouchableOpacity>
+                )}
+            </View>
+        </View>
+      </Modal>
+    );
+  }
 
   return (
     <Modal
@@ -225,4 +278,46 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },
+  toastOverlayContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingBottom: 50,
+    backgroundColor: 'transparent',
+  },
+  undoToast: {
+    flexDirection: 'row',
+    backgroundColor: '#323232',
+    width: '90%',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  toastContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10
+  },
+  undoToastText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: '500'
+  },
+  undoButton: {
+    marginLeft: 10,
+    padding: 4
+  },
+  undoButtonText: {
+    color: '#BB86FC',
+    fontWeight: 'bold',
+    fontSize: 14,
+    letterSpacing: 0.5
+  }
 });

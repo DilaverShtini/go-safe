@@ -13,6 +13,7 @@ interface Report {
   longitude: number;
   type: string;
   note: string;
+  isMyReport?: boolean;
 }
 
 interface RouteInfo {
@@ -60,7 +61,7 @@ export default function MapScreen() {
   const [reports, setReports] = useState<Report[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // GESTIONE PERMESSI POSIZIONE
+  const [lastReportId, setLastReportId] = useState<number | null>(null);
   useEffect(() => {
     (async () => {
       try {
@@ -100,7 +101,6 @@ export default function MapScreen() {
   }, []);
 
   const handleCenterOnUser = async () => {
-    // Controllo rapido permessi prima di centrare
     const { status } = await Location.getForegroundPermissionsAsync();
     if (status !== 'granted') {
         Alert.alert("Errore", "Permesso di localizzazione non concesso.");
@@ -142,7 +142,6 @@ export default function MapScreen() {
     const midLat = (start.latitude + end.latitude) / 2;
     const midLon = (start.longitude + end.longitude) / 2;
     
-    // Vettore direzione
     const dLat = end.latitude - start.latitude;
     const dLon = end.longitude - start.longitude;
     
@@ -155,7 +154,7 @@ export default function MapScreen() {
     };
     
     const dist1 = Math.sqrt(Math.pow(wp1.latitude - midLat, 2) + Math.pow(wp1.longitude - midLon, 2));
-    const ratio1 = offsetAmount / (dist1 || 1); // Evita divisione per 0
+    const ratio1 = offsetAmount / (dist1 || 1);
     
     const alt1 = {
         latitude: midLat + (wp1.latitude - midLat) * ratio1,
@@ -217,7 +216,6 @@ export default function MapScreen() {
           const pathPoints = route.geometry.coordinates.map((c: number[]) => ({ lat: c[1], lon: c[0] }));
           let currentRouteDangerCount = 0;
 
-          // Analisi collisioni
           for (let i = 0; i < pathPoints.length; i += 2) { 
               const point = pathPoints[i];
               const pointObj = {latitude: point.lat, longitude: point.lon};
@@ -238,10 +236,8 @@ export default function MapScreen() {
               lowestDangerCount = currentRouteDangerCount;
               bestRoute = route;
               bestRouteDistance = route.distance;
-              // Se la rotta scelta non è la prima della lista, è un'alternativa
               isAlternativeSelected = (route !== allRoutes[0]);
           } 
-          // A parità di pericoli, prendi la più breve
           else if (currentRouteDangerCount === lowestDangerCount) {
               if (route.distance < bestRouteDistance) {
                   bestRoute = route;
@@ -331,17 +327,26 @@ export default function MapScreen() {
   const handleCreateReport = (type: string, note: string) => {
     if (!selectedPoint) return;
 
+    const newId = Date.now();
     const newReport: Report = {
-      id: Date.now(),
+      id: newId,
       latitude: selectedPoint.latitude,
       longitude: selectedPoint.longitude,
       type: type,
       note: note,
+      isMyReport: true,
     };
 
-    setReports([...reports, newReport]);
+    setReports((prev) => [...prev, newReport]);
+    setLastReportId(newId);
     setSelectedPoint(null);
-    setModalVisible(false);
+  };
+
+  const handleUndoReport = () => {
+      if (lastReportId) {
+          setReports((prev) => prev.filter((r) => r.id !== lastReportId));
+          setLastReportId(null);
+      }
   };
 
   const clearNavigation = () => {
@@ -384,14 +389,63 @@ export default function MapScreen() {
           <Marker
             key={report.id}
             coordinate={{ latitude: report.latitude, longitude: report.longitude }}
-            title={TYPE_LABELS[report.type]} description={report.note}
+            title={!report.isMyReport ? TYPE_LABELS[report.type] : undefined}
+            description={!report.isMyReport ? report.note : undefined}
+            
+            onPress={() => {
+              if (report.isMyReport) {
+                const noteText = report.note && report.note.trim() !== "" 
+                    ? `Nota: "${report.note}"` 
+                    : "Nessuna nota aggiuntiva.";
+
+                Alert.alert(
+                  `Tipo segnalazione: ${TYPE_LABELS[report.type]}`,
+                  `${noteText}\n\nCosa vuoi fare?`,
+                  [
+                    { 
+                      text: "Elimina", 
+                      style: "destructive",
+                      onPress: () => {
+                        Alert.alert(
+                          "Sei sicuro?",
+                          "L'eliminazione è definitiva e non può essere annullata.",
+                          [
+                            { 
+                              text: "Elimina definitivamente", 
+                              style: "destructive", 
+                              onPress: () => {
+                                setReports((prev) => prev.filter((r) => r.id !== report.id));
+                              }
+                            },
+                            { text: "Annulla", style: "cancel" }
+                          ]
+                        );
+                      }
+                    },
+                    { 
+                      text: "Chiudi", 
+                      style: "cancel"
+                    } 
+                  ]
+                );
+              }
+            }}
           >
             <View style={[styles.markerBg, { backgroundColor: TYPE_COLORS[report.type] }]}>
-               <MaterialCommunityIcons name={TYPE_ICONS[report.type]} size={20} color="white" />
+              <MaterialCommunityIcons 
+                name={TYPE_ICONS[report.type]} 
+                size={20} 
+                color="white" 
+              />
+              {report.isMyReport && (
+                <View style={styles.myReportBadge}>
+                  <MaterialCommunityIcons name="account" size={10} color="white" />
+                </View>
+              )}
             </View>
           </Marker>
         ))}
-        
+
         {selectedPoint && <Marker coordinate={selectedPoint} title="Punto Selezionato" pinColor="blue" opacity={0.7} />}
       </MapView>
 
@@ -438,6 +492,7 @@ export default function MapScreen() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSubmit={handleCreateReport}
+        onUndo={handleUndoReport}
       />
     </View>
   );
@@ -524,5 +579,18 @@ const styles = StyleSheet.create({
       fontSize: 14,
       fontWeight: '600',
       marginTop: 4,
-  }
+  },
+  myReportBadge: {
+    position: 'absolute',
+    bottom: -5,
+    right: -5,
+    backgroundColor: '#2ecc71',
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'white'
+  },
 });
