@@ -19,6 +19,7 @@ export interface Review {
   tags: string; 
   text: string;
   rating: number;
+  isMyReview?: boolean; 
 }
 
 export interface UserProfile {
@@ -40,22 +41,29 @@ interface UserProfileModalProps {
 
 export default function UserProfileModal({ visible, user, onClose }: UserProfileModalProps) {
   const [displayUser, setDisplayUser] = useState<UserProfile | null>(null);
+  
   const [isWritingReview, setIsWritingReview] = useState(false);
   const [newReviewText, setNewReviewText] = useState("");
   const [newRating, setNewRating] = useState(0);
+  
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       setDisplayUser(user);
-      setIsWritingReview(false);
-      setNewReviewText("");
-      setNewRating(0);
+      resetForm();
     }
   }, [user, visible]);
 
+  const resetForm = () => {
+    setIsWritingReview(false);
+    setNewReviewText("");
+    setNewRating(0);
+    setEditingReviewId(null);
+  };
+
   if (!displayUser) return null;
 
-  // CONTROLLO SE È IL MIO PROFILO PER NASCONDERE LA SEZIONE RECENSIONI
   const isOwnProfile = displayUser.id === 'me';
 
   const renderStaticStars = (count: number, size: number = 20, color: string = "#333") => {
@@ -100,25 +108,66 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
         return;
     }
 
-    const newReview: Review = {
-        id: Date.now().toString(),
-        title: "La tua Recensione",
-        tags: "@Tu",
-        text: newReviewText,
-        rating: newRating,
-    };
-
     setDisplayUser(prev => {
         if (!prev) return null;
-        return {
-            ...prev,
-            reviews: [newReview, ...prev.reviews]
-        };
+
+        if (editingReviewId) {
+            return {
+                ...prev,
+                reviews: prev.reviews.map(r => 
+                    r.id === editingReviewId 
+                    ? { ...r, text: newReviewText, rating: newRating } 
+                    : r
+                )
+            };
+        } else {
+            const newReview: Review = {
+                id: Date.now().toString(),
+                title: "La tua Recensione",
+                tags: "@Tu",
+                text: newReviewText,
+                rating: newRating,
+                isMyReview: true, 
+            };
+            return {
+                ...prev,
+                reviews: [newReview, ...prev.reviews]
+            };
+        }
     });
 
-    setNewReviewText("");
-    setNewRating(0);
-    setIsWritingReview(false);
+    resetForm();
+  };
+
+  const handleEditReview = (review: Review) => {
+      setNewReviewText(review.text);
+      setNewRating(review.rating);
+      setEditingReviewId(review.id);
+      setIsWritingReview(true);
+  };
+
+  const handleDeleteReview = (reviewId: string) => {
+      Alert.alert(
+          "Elimina Recensione",
+          "Sei sicuro di voler eliminare definitivamente questa recensione?",
+          [
+              { 
+                  text: "Elimina", 
+                  style: "destructive",
+                  onPress: () => {
+                      setDisplayUser(prev => {
+                          if (!prev) return null;
+                          return {
+                              ...prev,
+                              reviews: prev.reviews.filter(r => r.id !== reviewId)
+                          };
+                      });
+                      if (editingReviewId === reviewId) resetForm();
+                  }
+              },
+              { text: "Annulla", style: "cancel" }
+          ]
+      );
   };
 
   return (
@@ -126,7 +175,6 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           
-          {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose} style={styles.backButton}>
               <Feather name="arrow-left" size={26} color="#333" />
@@ -137,7 +185,6 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
 
           <ScrollView contentContainerStyle={styles.scrollContent}>
             
-            {/* Profilo Top Section */}
             <View style={styles.profileHeader}>
               <Image source={{ uri: displayUser.avatarUrl }} style={styles.avatarLarge} />
               
@@ -165,12 +212,10 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
               </View>
             </View>
 
-            {/* Rating Generale */}
             <View style={styles.ratingSection}>
                {renderStaticStars(Math.round(displayUser.rating), 36, "#111")}
             </View>
 
-            {/* Social Icons */}
             <View style={styles.socialSection}>
                 <TouchableOpacity style={styles.socialIcon}>
                     <Feather name="instagram" size={30} color="#333" />
@@ -182,7 +227,6 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
 
             <View style={styles.sectionDivider} />
 
-            {/* SEZIONE AGGIUNGI RECENSIONE */}
             {!isOwnProfile && (
                 <View style={styles.addReviewSection}>
                     {!isWritingReview ? (
@@ -191,7 +235,11 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
                         </TouchableOpacity>
                     ) : (
                         <View style={styles.inputContainer}>
-                            <Text style={styles.writeLabel}>Valuta la tua esperienza con {displayUser.name}:</Text>
+                            <Text style={styles.writeLabel}>
+                                {editingReviewId 
+                                    ? "Modifica la tua recensione:" 
+                                    : `Valuta la tua esperienza con ${displayUser.name}:`}
+                            </Text>
                             
                             <View style={{alignItems: 'center', marginBottom: 10}}>
                                 {renderInteractiveStars()}
@@ -208,11 +256,13 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
                                 onChangeText={setNewReviewText}
                             />
                             <View style={styles.formButtons}>
-                                <TouchableOpacity onPress={() => setIsWritingReview(false)}>
+                                <TouchableOpacity onPress={resetForm}>
                                     <Text style={styles.cancelText}>Annulla</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.submitButton} onPress={handleSendReview}>
-                                    <Text style={styles.submitText}>Invia Recensione</Text>
+                                    <Text style={styles.submitText}>
+                                        {editingReviewId ? "Aggiorna" : "Invia Recensione"}
+                                    </Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -220,7 +270,6 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
                 </View>
             )}
 
-            {/* Lista Esperienze / Recensioni */}
             <View style={styles.reviewsList}>
                 <Text style={styles.sectionTitle}>
                     Dicono di {isOwnProfile ? "te" : displayUser.name.split(" ")[0]}
@@ -235,9 +284,35 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
                 {displayUser.reviews.map((review) => (
                     <View key={review.id} style={styles.reviewCard}>
                         <View style={styles.reviewHeader}>
-                            <Text style={styles.reviewTitle}>{review.title}</Text>
-                            {renderStaticStars(review.rating, 16, "#555")}
+                            <View style={{flexDirection: 'row', alignItems: 'center', flex: 1}}>
+                                <Text style={styles.reviewTitle}>{review.title}</Text>
+                                {review.isMyReview && (
+                                    <Text style={styles.myReviewBadge}>(Tu)</Text>
+                                )}
+                            </View>
+                            
+                            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                                {renderStaticStars(review.rating, 16, "#555")}
+                                
+                                {review.isMyReview && (
+                                    <View style={styles.reviewActions}>
+                                        <TouchableOpacity 
+                                            onPress={() => handleEditReview(review)} 
+                                            style={styles.actionIcon}
+                                        >
+                                            <Feather name="edit-2" size={16} color="#666" />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity 
+                                            onPress={() => handleDeleteReview(review.id)}
+                                            style={styles.actionIcon}
+                                        >
+                                            <Feather name="trash-2" size={16} color="#e74c3c" />
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </View>
                         </View>
+                        
                         <Text style={styles.reviewTags}>{review.tags}</Text>
                         <Text style={styles.reviewText}>{review.text}</Text>
                         <View style={styles.reviewDivider} />
@@ -253,204 +328,45 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFF", 
-  },
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
+  safeArea: { flex: 1, backgroundColor: "#FFF" },
+  container: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 15 },
   backButton: { padding: 5 },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "500",
-    color: "#333",
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  profileHeader: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    marginTop: 10,
-    alignItems: 'center'
-  },
-  avatarLarge: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginRight: 20,
-    backgroundColor: '#DDD'
-  },
-  profileInfoRight: {
-    flex: 1,
-    justifyContent: 'center'
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    flexShrink: 1
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 5
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333'
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E0E0E0',
-    marginTop: 10,
-    width: '100%'
-  },
-  ratingSection: {
-    alignItems: 'center',
-    marginVertical: 20
-  },
-  socialSection: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 20,
-    marginBottom: 20
-  },
-  socialIcon: {
-    padding: 5
-  },
-  sectionDivider: {
-    height: 1,
-    backgroundColor: '#EEE',
-    marginHorizontal: 20,
-    marginBottom: 20
-  },
-  reviewsList: {
-    paddingHorizontal: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#333'
-  },
-  reviewCard: {
-    marginBottom: 20,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5
-  },
-  reviewTitle: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '600'
-  },
-  reviewTags: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 5
-  },
-  reviewText: {
-    fontSize: 14,
-    color: '#444',
-    lineHeight: 20
-  },
-  reviewDivider: {
-    height: 1,
-    backgroundColor: '#EEE',
-    marginTop: 15
-  },
-  addReviewSection: {
-      paddingHorizontal: 20,
-      marginBottom: 30, 
-      alignItems: 'center'
-  },
-  addButton: {
-      backgroundColor: '#F3E5F5',
-      paddingHorizontal: 20,
-      paddingVertical: 12,
-      borderRadius: 25,
-      borderWidth: 1,
-      borderColor: '#DDD',
-      width: '100%',
-      alignItems: 'center'
-  },
-  addButtonText: {
-      color: '#5E35B1',
-      fontWeight: 'bold'
-  },
-  inputContainer: {
-      width: '100%',
-      backgroundColor: '#FAFAFA',
-      padding: 15,
-      borderRadius: 15,
-      borderWidth: 1,
-      borderColor: '#DDD',
-      shadowColor: "#000",
-      shadowOffset: {width: 0, height: 2},
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3
-  },
-  writeLabel: {
-      marginBottom: 10,
-      color: '#555',
-      fontWeight: '600',
-      textAlign: 'center'
-  },
-  textInput: {
-      backgroundColor: 'white',
-      height: 80,
-      borderRadius: 8,
-      padding: 10,
-      textAlignVertical: 'top',
-      marginBottom: 15,
-      borderWidth: 1,
-      borderColor: '#EEE'
-  },
-  formButtons: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-  },
-  cancelText: {
-      color: '#777',
-      padding: 10
-  },
-  submitButton: {
-      backgroundColor: '#5E35B1',
-      paddingHorizontal: 20,
-      paddingVertical: 10,
-      borderRadius: 20
-  },
-  submitText: {
-      color: 'white',
-      fontWeight: 'bold'
-  }
+  headerTitle: { fontSize: 20, fontWeight: "500", color: "#333" },
+  scrollContent: { paddingBottom: 40 },
+  profileHeader: { flexDirection: "row", paddingHorizontal: 20, marginTop: 10, alignItems: 'center' },
+  avatarLarge: { width: 100, height: 100, borderRadius: 50, marginRight: 20, backgroundColor: '#DDD' },
+  profileInfoRight: { flex: 1, justifyContent: 'center' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  userName: { fontSize: 18, fontWeight: 'bold', color: '#333', flexShrink: 1 },
+  statsContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+  statItem: { alignItems: 'center', flex: 1 },
+  statLabel: { fontSize: 12, color: '#666', marginBottom: 4 },
+  statValue: { fontSize: 14, fontWeight: 'bold', color: '#333' },
+  divider: { height: 1, backgroundColor: '#E0E0E0', marginTop: 10, width: '100%' },
+  ratingSection: { alignItems: 'center', marginVertical: 20 },
+  socialSection: { flexDirection: 'row', justifyContent: 'center', gap: 20, marginBottom: 20 },
+  socialIcon: { padding: 5 },
+  sectionDivider: { height: 1, backgroundColor: '#EEE', marginHorizontal: 20, marginBottom: 20 },
+  reviewsList: { paddingHorizontal: 20 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 15, color: '#333' },
+  reviewCard: { marginBottom: 20 },
+  reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
+  reviewTitle: { fontSize: 16, color: '#333', fontWeight: '600' },
+  reviewTags: { fontSize: 12, color: '#666', marginBottom: 5 },
+  reviewText: { fontSize: 14, color: '#444', lineHeight: 20 },
+  reviewDivider: { height: 1, backgroundColor: '#EEE', marginTop: 15 },
+  addReviewSection: { paddingHorizontal: 20, marginBottom: 30, alignItems: 'center' },
+  addButton: { backgroundColor: '#F3E5F5', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 25, borderWidth: 1, borderColor: '#DDD', width: '100%', alignItems: 'center' },
+  addButtonText: { color: '#5E35B1', fontWeight: 'bold' },
+  inputContainer: { width: '100%', backgroundColor: '#FAFAFA', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#DDD', shadowColor: "#000", shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  writeLabel: { marginBottom: 10, color: '#555', fontWeight: '600', textAlign: 'center' },
+  textInput: { backgroundColor: 'white', height: 80, borderRadius: 8, padding: 10, textAlignVertical: 'top', marginBottom: 15, borderWidth: 1, borderColor: '#EEE' },
+  formButtons: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cancelText: { color: '#777', padding: 10 },
+  submitButton: { backgroundColor: '#5E35B1', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
+  submitText: { color: 'white', fontWeight: 'bold' },
+  myReviewBadge: { fontSize: 12, color: '#5E35B1', marginLeft: 8, fontWeight: 'bold' },
+  reviewActions: { flexDirection: 'row', marginLeft: 10, borderLeftWidth: 1, borderLeftColor: '#DDD', paddingLeft: 10 },
+  actionIcon: { marginLeft: 10, padding: 2 }
 });
