@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   TextInput
 } from "react-native";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
-import { Audio } from "expo-av";
+import { useAudioPlayer } from 'expo-audio';
 import { SafeAreaView } from "react-native-safe-area-context";
 
 interface Contact {
@@ -29,13 +29,10 @@ const MOCK_CONTACTS: Contact[] = [
 ];
 
 export default function SosScreen() {
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  
-  // STATO PER LA RICERCA
+  const player = useAudioPlayer(require('../../assets/sirena_emergenza.mp3'));
+
   const [searchQuery, setSearchQuery] = useState("");
 
-  // LOGICA DI FILTRO
   const filteredContacts = MOCK_CONTACTS.filter((contact) => 
     contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     contact.phoneNumber.includes(searchQuery)
@@ -56,29 +53,15 @@ export default function SosScreen() {
       .catch((err) => console.error("Errore:", err));
   };
 
-  const toggleAlarm = async () => {
-    try {
-      if (sound && isPlaying) {
-        await sound.stopAsync();
-        setIsPlaying(false);
-      } else {
-        const { sound: newSound } = await Audio.Sound.createAsync(
-           require('../../assets/sirena_emergenza.mp3')
-        );
-        setSound(newSound);
-        setIsPlaying(true);
-        await newSound.setIsLoopingAsync(true);
-        await newSound.playAsync();
-      }
-    } catch (error) {
-      console.log("Errore Audio:", error);
-      Alert.alert("Attenzione", "File audio non trovato.");
+  const toggleAlarm = () => {
+    if (player.playing) {
+      player.pause();
+      player.seekTo(0); 
+    } else {
+      player.loop = true; 
+      player.play();
     }
   };
-
-  useEffect(() => {
-    return sound ? () => { sound.unloadAsync(); } : undefined;
-  }, [sound]);
 
   const renderContactItem = ({ item }: { item: Contact }) => (
     <View style={styles.card}>
@@ -106,7 +89,6 @@ export default function SosScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>SOS & Emergenza</Text>
         
-        {/* BARRA DI RICERCA */}
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
           <TextInput
@@ -139,12 +121,12 @@ export default function SosScreen() {
       />
 
       <TouchableOpacity 
-        style={[styles.fab, isPlaying ? styles.fabActive : null]} 
+        style={[styles.fab, player.playing ? styles.fabActive : null]} 
         onPress={toggleAlarm}
         activeOpacity={0.8}
       >
         <MaterialCommunityIcons 
-            name={isPlaying ? "bell-off" : "bell-ring"} 
+            name={player.playing ? "bell-off" : "bell-ring"} 
             size={32} 
             color="white" 
         />
@@ -158,7 +140,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f9fa"
   },
-
   header: { 
     padding: 20, 
     backgroundColor: "#fff", 
@@ -166,20 +147,11 @@ const styles = StyleSheet.create({
     borderColor: "#eee",
     paddingBottom: 15 
   },
-
   headerTitle: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#e74c3c"
   },
-
-  headerSubtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginTop: 5,
-    marginBottom: 15
-  },
-
   searchContainer: {
     flexDirection: "row",
     backgroundColor: "#f0f2f5",
@@ -189,23 +161,19 @@ const styles = StyleSheet.create({
     marginTop: 5,
     alignItems: "center",
   },
-
   searchIcon: {
     marginRight: 10,
   },
-
   searchInput: {
     flex: 1,
     fontSize: 16,
     color: "#333",
     paddingVertical: 4,
   },
-
   listContent: {
     padding: 20,
     paddingBottom: 100
   },
-
   card: {
     flexDirection: "row",
     backgroundColor: "white",
@@ -219,13 +187,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4
   },
-
   infoContainer: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1
   },
-
   avatarContainer: {
     width: 50,
     height: 50,
@@ -235,30 +201,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 15
   },
-
   avatarText: {
     fontSize: 20,
     fontWeight: "bold",
     color: "#7f8c8d"
   },
-
   name: {
     fontSize: 18,
     fontWeight: "600",
     color: "#2c3e50"
   },
-
   relation: {
     fontSize: 13,
     color: "#95a5a6"
   },
-
   number: {
     fontSize: 14,
     color: "#34495e",
     fontWeight: "500"
   },
-
   callButton: {
     backgroundColor: "#2ecc71",
     width: 50,
@@ -268,14 +229,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginLeft: 10
   },
-
   emptyText: {
     textAlign: "center",
     marginTop: 40,
     color: "#aaa",
     fontSize: 16
   },
-
   fab: { 
     position: "absolute", 
     bottom: 30, 
@@ -295,7 +254,6 @@ const styles = StyleSheet.create({
     borderWidth: 3, 
     borderColor: "transparent", 
   },
-
   fabActive: { 
     backgroundColor: "#c0392b", 
     borderColor: "#fff", 
