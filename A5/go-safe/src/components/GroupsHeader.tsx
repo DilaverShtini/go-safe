@@ -1,23 +1,36 @@
 import React from "react";
 import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons, Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-export default function GroupsHeader() {
+// Definiamo le props che il componente si aspetta
+interface GroupsHeaderProps {
+  searchQuery: string;
+  onSearchChange: (text: string) => void;
+}
+
+export default function GroupsHeader({ searchQuery, onSearchChange }: GroupsHeaderProps) {
   const router = useRouter();
 
   return (
     <View style={styles.headerContainer}>
-      {/* Search Input */}
-      <View style={styles.searchBar}>
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Ricerca Gruppo"
-          placeholderTextColor="#888"
+          placeholder="Cerca gruppo"
+          placeholderTextColor="#999"
+          value={searchQuery}
+          onChangeText={onSearchChange} // Chiama la funzione del genitore
+          autoCapitalize="none"
         />
-        <Feather name="search" size={20} color="#666" style={styles.searchIcon} />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => onSearchChange("")}>
+            <Ionicons name="close-circle" size={20} color="#ccc" />
+          </TouchableOpacity>
+        )}
       </View>
-
+      
       {/* Profile Button */}
       <TouchableOpacity 
         style={styles.iconButton}
@@ -39,13 +52,13 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 4,
   },
-  searchBar: {
+  searchContainer: {
     flex: 1,
     flexDirection: "row",
-    backgroundColor: "#F3E5F5",
-    borderRadius: 25,
+    backgroundColor: "#f0f2f5",
+    borderRadius: 12,
     paddingHorizontal: 15,
-    height: 45,
+    paddingVertical: 10,
     alignItems: "center",
   },
   searchInput: {
@@ -54,6 +67,6 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   searchIcon: {
-    marginLeft: 8,
+    marginRight: 8,
   },
 });

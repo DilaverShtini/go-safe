@@ -87,7 +87,7 @@ export default function SosScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>SOS & Emergenza</Text>
+        <Text style={styles.headerTitle}>SOS e chiamate di emergenza</Text>
         
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
@@ -144,20 +144,20 @@ const styles = StyleSheet.create({
     padding: 20, 
     backgroundColor: "#fff", 
     borderBottomWidth: 1, 
-    borderColor: "#eee",
-    paddingBottom: 15 
+    borderColor: "#eee"
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 25,
     fontWeight: "bold",
-    color: "#e74c3c"
+    color: "#e74c3c",
+    paddingVertical: 4
   },
   searchContainer: {
     flexDirection: "row",
     backgroundColor: "#f0f2f5",
     borderRadius: 12,
     paddingHorizontal: 15,
-    paddingVertical: 10,
+    paddingVertical: 15,
     marginTop: 5,
     alignItems: "center",
   },

@@ -4,17 +4,16 @@ import {
   StyleSheet, 
   FlatList, 
   TouchableOpacity, 
-  StatusBar,
   Text,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import GroupCard from "../../src/components/GroupCard";
 import GroupsHeader from "../../src/components/GroupsHeader";
 import CreateGroupModal from "../../src/components/CreateGroupModal";
 import GroupDetailModal from "../../src/components/GroupDetailModal";
 import ConfirmationModal from "../../src/components/ConfirmationModal";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 interface GroupItem {
   id: string;
@@ -56,14 +55,22 @@ const INITIAL_GROUPS: GroupItem[] = [
 export default function GroupsScreen() {
   const [groups, setGroups] = useState<GroupItem[]>(INITIAL_GROUPS);
   
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
   const [isDetailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<GroupItem | null>(null);
-
   const [isConfirmVisible, setConfirmVisible] = useState(false);
   const [groupToLeaveId, setGroupToLeaveId] = useState<string | null>(null);
-  
   const [groupToLeaveName, setGroupToLeaveName] = useState<string>("");
+
+  const filteredGroups = groups.filter(group => {
+      const query = searchQuery.toLowerCase();
+      return (
+          group.name.toLowerCase().includes(query) || 
+          group.startZone.toLowerCase().includes(query)
+      );
+  });
 
   const handleCreateGroup = (newGroupData: any) => {
     const newGroup: GroupItem = {
@@ -83,13 +90,10 @@ export default function GroupsScreen() {
 
   const handleJoinGroup = (groupId: string) => {
     const updatedGroups = groups.map(group => {
-        if (group.id === groupId) {
-            return { ...group, isJoined: true };
-        }
+        if (group.id === groupId) return { ...group, isJoined: true };
         return group;
     });
     setGroups(updatedGroups);
-
     if (selectedGroup && selectedGroup.id === groupId) {
         setSelectedGroup({ ...selectedGroup, isJoined: true });
     }
@@ -98,7 +102,6 @@ export default function GroupsScreen() {
   const handleLeaveRequest = (groupId: string) => {
       const groupFound = groups.find(g => g.id === groupId);
       const groupName = groupFound ? groupFound.name : "questo gruppo";
-
       setGroupToLeaveId(groupId);
       setGroupToLeaveName(groupName); 
       setConfirmVisible(true);
@@ -106,20 +109,14 @@ export default function GroupsScreen() {
 
   const confirmLeaveGroup = () => {
     if (!groupToLeaveId) return;
-
     const updatedGroups = groups.map(group => {
-        if (group.id === groupToLeaveId) {
-            return { ...group, isJoined: false };
-        }
+        if (group.id === groupToLeaveId) return { ...group, isJoined: false };
         return group;
     });
     setGroups(updatedGroups);
-
     if (selectedGroup && selectedGroup.id === groupToLeaveId) {
         setSelectedGroup({ ...selectedGroup, isJoined: false });
     }
-    
-    // Reset quando abbandoniamo il gruppo
     setConfirmVisible(false);
     setGroupToLeaveId(null);
     setGroupToLeaveName("");
@@ -131,13 +128,19 @@ export default function GroupsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView 
+      style={styles.safeArea} 
+      edges={['top', 'left', 'right']} 
+    >
       <View style={styles.container}>
         
-        <GroupsHeader />
+        <GroupsHeader 
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+        />
 
         <FlatList
-          data={groups}
+          data={filteredGroups}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
@@ -157,7 +160,9 @@ export default function GroupsScreen() {
           )}
           ListEmptyComponent={
              <View style={{alignItems: 'center', marginTop: 50}}>
-                 <Text style={{color: '#999'}}>Nessun gruppo disponibile.</Text>
+                 <Text style={{color: '#999'}}>
+                    {searchQuery ? "Nessun risultato trovato." : "Nessun gruppo disponibile."}
+                 </Text>
              </View>
           }
         />
@@ -210,7 +215,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   listContent: {
-    paddingBottom: 100,
+    paddingBottom: 100, 
   },
   fab: {
     position: "absolute",

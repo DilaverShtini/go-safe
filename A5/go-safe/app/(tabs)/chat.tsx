@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
       borderBottomWidth: 1, 
       borderBottomColor: '#f0f0f0' 
   },
-  screenTitle: { fontSize: 28, fontWeight: "bold", color: "#333" },
+  screenTitle: { fontSize: 25, fontWeight: "bold", color: "#333" },
   listContent: { paddingBottom: 100 },
   fab: { 
       position: "absolute", 
