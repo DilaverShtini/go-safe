@@ -27,11 +27,10 @@ export default function ProfileScreen() {
     bio: "Appassionato di viaggi e sicurezza urbana.",
     email: "mario.rossi@example.com",
     instagram: "mario_rossi_official",
-    twitter: "@mariorossi",
+    facebook: "@mariorossi",
     image: null as string | null,
   });
 
-  // GESTIONE FOTOCAMERA
   const pickFromCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
 
@@ -58,7 +57,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // GESTIONE GALLERIA
   const pickFromGallery = async () => {
     const permissionCheck = await ImagePicker.getMediaLibraryPermissionsAsync();
   
@@ -90,7 +88,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // MENU DI SCELTA FOTO
   const handleProfileImagePress = () => {
     if (!isEditing) return;
 
@@ -134,7 +131,6 @@ export default function ProfileScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"} 
         style={{ flex: 1 }}
       >
-        {/* HEADER */}
         <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
                 <Ionicons name="arrow-back" size={24} color="#333" />
@@ -149,7 +145,6 @@ export default function ProfileScreen() {
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           
-          {/* SEZIONE IMMAGINE */}
           <View style={styles.imageContainer}>
             <TouchableOpacity onPress={handleProfileImagePress} activeOpacity={isEditing ? 0.7 : 1}>
               {userInfo.image ? (
@@ -160,7 +155,6 @@ export default function ProfileScreen() {
                 </View>
               )}
               
-              {/* Badge fotocamera (appare solo in modifica) */}
               {isEditing && (
                 <View style={styles.editBadge}>
                   <Ionicons name="camera" size={20} color="white" />
@@ -168,7 +162,6 @@ export default function ProfileScreen() {
               )}
             </TouchableOpacity>
             
-            {/* Tasto Modifica/Salva */}
             <TouchableOpacity 
                 style={styles.editActionLink} 
                 onPress={() => isEditing ? handleSave() : setIsEditing(true)}
@@ -179,7 +172,6 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* FORM DATI PERSONALI */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Informazioni</Text>
             
@@ -216,7 +208,6 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* SEZIONE SOCIAL */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Social Network</Text>
             
@@ -232,18 +223,17 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.socialRow}>
-                <MaterialCommunityIcons name="twitter" size={28} color="#1DA1F2" />
+                <MaterialCommunityIcons name="facebook" size={28} color="#1DA1F2" />
                 <TextInput
                     style={[styles.socialInput, isEditing && styles.inputEditable]}
-                    value={userInfo.twitter}
+                    value={userInfo.facebook}
                     editable={isEditing}
-                    placeholder="Username Twitter/X"
-                    onChangeText={(text) => setUserInfo({...userInfo, twitter: text})}
+                    placeholder="Username Facebook/X"
+                    onChangeText={(text) => setUserInfo({...userInfo, facebook: text})}
                 />
             </View>
           </View>
 
-          {/* --- NUOVO TASTO AIUTO & FAQ --- */}
           <TouchableOpacity 
             style={styles.helpButton} 
             onPress={() => router.push("/faq")}
@@ -256,7 +246,6 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
 
-          {/* TASTO LOGOUT */}
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={24} color="#e74c3c" />
             <Text style={styles.logoutText}>Disconnettiti</Text>
@@ -354,7 +343,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   
-  // Input
   inputGroup: {
     marginBottom: 15,
   },
@@ -378,7 +366,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   
-  // Social
   socialRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -393,7 +380,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
 
-  // Help Button
   helpButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -413,7 +399,6 @@ const styles = StyleSheet.create({
       color: "#333"
   },
 
-  // Logout
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",

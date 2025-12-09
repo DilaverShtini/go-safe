@@ -10,7 +10,7 @@ import {
   TextInput,
   Alert
 } from "react-native";
-import { MaterialCommunityIcons, Feather, FontAwesome } from "@expo/vector-icons";
+import { MaterialCommunityIcons, Feather, FontAwesome, Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export interface Review {
@@ -42,15 +42,18 @@ interface UserProfileModalProps {
 export default function UserProfileModal({ visible, user, onClose }: UserProfileModalProps) {
   const [displayUser, setDisplayUser] = useState<UserProfile | null>(null);
   
+  const [isConnected, setIsConnected] = useState(false);
+
   const [isWritingReview, setIsWritingReview] = useState(false);
   const [newReviewText, setNewReviewText] = useState("");
   const [newRating, setNewRating] = useState(0);
-  
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
-      setDisplayUser(user);
+      const initialAvg = calculateAverageRating(user.reviews);
+      setDisplayUser({ ...user, rating: initialAvg });
+      setIsConnected(false);
       resetForm();
     }
   }, [user, visible]);
@@ -60,6 +63,17 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
     setNewReviewText("");
     setNewRating(0);
     setEditingReviewId(null);
+  };
+
+  const toggleConnection = () => {
+      setIsConnected(!isConnected);
+  };
+
+  const calculateAverageRating = (reviews: Review[]) => {
+    if (!reviews || reviews.length === 0) return 0;
+    const total = reviews.reduce((sum, review) => sum + review.rating, 0);
+    const avg = total / reviews.length;
+    return parseFloat(avg.toFixed(1));
   };
 
   if (!displayUser) return null;
@@ -111,15 +125,14 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
     setDisplayUser(prev => {
         if (!prev) return null;
 
+        let updatedReviews: Review[];
+
         if (editingReviewId) {
-            return {
-                ...prev,
-                reviews: prev.reviews.map(r => 
-                    r.id === editingReviewId 
-                    ? { ...r, text: newReviewText, rating: newRating } 
-                    : r
-                )
-            };
+            updatedReviews = prev.reviews.map(r => 
+                r.id === editingReviewId 
+                ? { ...r, text: newReviewText, rating: newRating } 
+                : r
+            );
         } else {
             const newReview: Review = {
                 id: Date.now().toString(),
@@ -129,11 +142,16 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
                 rating: newRating,
                 isMyReview: true, 
             };
-            return {
-                ...prev,
-                reviews: [newReview, ...prev.reviews]
-            };
+            updatedReviews = [newReview, ...prev.reviews];
         }
+
+        const newAverage = calculateAverageRating(updatedReviews);
+
+        return {
+            ...prev,
+            reviews: updatedReviews,
+            rating: newAverage
+        };
     });
 
     resetForm();
@@ -157,9 +175,12 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
                   onPress: () => {
                       setDisplayUser(prev => {
                           if (!prev) return null;
+                          const updatedReviews = prev.reviews.filter(r => r.id !== reviewId);
+                          const newAverage = calculateAverageRating(updatedReviews);
                           return {
                               ...prev,
-                              reviews: prev.reviews.filter(r => r.id !== reviewId)
+                              reviews: updatedReviews,
+                              rating: newAverage
                           };
                       });
                       if (editingReviewId === reviewId) resetForm();
@@ -194,34 +215,63 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
                       {displayUser.name} {isOwnProfile && "(Tu)"}
                   </Text>
                   {displayUser.isVerified && (
-                    <MaterialCommunityIcons name="check-decagram-outline" size={28} color="#333" style={{marginLeft: 8}} />
+                    <MaterialCommunityIcons name="check-decagram" size={24} color="#6C5CE7" style={{marginLeft: 6}} />
                   )}
                 </View>
 
                 <View style={styles.statsContainer}>
-                   <View style={styles.statItem}>
-                      <Text style={styles.statLabel}>Collegamenti</Text>
-                      <Text style={styles.statValue}>{displayUser.connections}</Text>
-                   </View>
-                   <View style={styles.statItem}>
-                      <Text style={styles.statLabel}>Num. viaggi</Text>
-                      <Text style={styles.statValue}>{displayUser.trips}</Text>
-                   </View>
+                    <View style={styles.statItem}>
+                       <Text style={styles.statLabel}>Collegamenti</Text>
+                       <Text style={styles.statValue}>{displayUser.connections + (isConnected ? 1 : 0)}</Text>
+                    </View>
+                    <View style={styles.dividerVertical} />
+                    <View style={styles.statItem}>
+                       <Text style={styles.statLabel}>Viaggi</Text>
+                       <Text style={styles.statValue}>{displayUser.trips}</Text>
+                    </View>
                 </View>
-                <View style={styles.divider} />
+
+                {!isOwnProfile && (
+                    <TouchableOpacity 
+                        style={[styles.connectButton, isConnected && styles.connectButtonActive]}
+                        onPress={toggleConnection}
+                        activeOpacity={0.7}
+                    >
+                        {isConnected ? (
+                            <>
+                                <Feather name="user-check" size={18} color="#6C5CE7" style={{marginRight: 6}} />
+                                <Text style={styles.connectButtonTextActive}>Collegato</Text>
+                            </>
+                        ) : (
+                            <>
+                                <Feather name="user-plus" size={18} color="#FFF" style={{marginRight: 6}} />
+                                <Text style={styles.connectButtonText}>Collegati</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+                )}
+
               </View>
             </View>
 
+            <View style={styles.sectionDivider} />
+
             <View style={styles.ratingSection}>
-               {renderStaticStars(Math.round(displayUser.rating), 36, "#111")}
+               {renderStaticStars(Math.round(displayUser.rating), 32, "#FFD700")}
+               <Text style={styles.ratingScore}>
+                   {displayUser.rating > 0 ? displayUser.rating.toFixed(1) : "N.D."} / 5.0
+               </Text>
+               <Text style={{fontSize: 12, color: '#999', marginTop: 2}}>
+                   ({displayUser.reviews.length} recensioni)
+               </Text>
             </View>
 
             <View style={styles.socialSection}>
                 <TouchableOpacity style={styles.socialIcon}>
-                    <Feather name="instagram" size={30} color="#333" />
+                    <Feather name="instagram" size={24} color="#C13584" />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.socialIcon}>
-                    <FontAwesome name="facebook-square" size={30} color="#333" />
+                    <FontAwesome name="facebook" size={24} color="#353cf9ff" />
                 </TouchableOpacity>
             </View>
 
@@ -272,12 +322,12 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
 
             <View style={styles.reviewsList}>
                 <Text style={styles.sectionTitle}>
-                    Dicono di {isOwnProfile ? "te" : displayUser.name.split(" ")[0]}
+                    Dicono di {isOwnProfile ? "te" : displayUser.name.split(" ")[0]} ({displayUser.reviews.length})
                 </Text>
 
                 {displayUser.reviews.length === 0 && (
-                    <Text style={{textAlign: 'center', color: '#999', marginTop: 20, fontStyle: 'italic'}}>
-                        Nessuna recensione ancora.
+                    <Text style={{textAlign: 'center', color: '#999', marginTop: 10, fontStyle: 'italic'}}>
+                        Nessuna recensione ancora. Sii il primo!
                     </Text>
                 )}
 
@@ -292,7 +342,7 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
                             </View>
                             
                             <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                                {renderStaticStars(review.rating, 16, "#555")}
+                                {renderStaticStars(review.rating, 14, "#FBC02D")}
                                 
                                 {review.isMyReview && (
                                     <View style={styles.reviewActions}>
@@ -315,7 +365,6 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
                         
                         <Text style={styles.reviewTags}>{review.tags}</Text>
                         <Text style={styles.reviewText}>{review.text}</Text>
-                        <View style={styles.reviewDivider} />
                     </View>
                 ))}
             </View>
@@ -330,43 +379,88 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#FFF" },
   container: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 15 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   backButton: { padding: 5 },
-  headerTitle: { fontSize: 20, fontWeight: "500", color: "#333" },
+  headerTitle: { fontSize: 18, fontWeight: "600", color: "#333" },
   scrollContent: { paddingBottom: 40 },
-  profileHeader: { flexDirection: "row", paddingHorizontal: 20, marginTop: 10, alignItems: 'center' },
-  avatarLarge: { width: 100, height: 100, borderRadius: 50, marginRight: 20, backgroundColor: '#DDD' },
+  
+  profileHeader: { flexDirection: "row", paddingHorizontal: 20, marginTop: 20, alignItems: 'center', marginBottom: 10 },
+  avatarLarge: { width: 90, height: 90, borderRadius: 45, marginRight: 20, backgroundColor: '#EEE', borderWidth: 2, borderColor: '#FFF', shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 3 },
+  
   profileInfoRight: { flex: 1, justifyContent: 'center' },
-  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
-  userName: { fontSize: 18, fontWeight: 'bold', color: '#333', flexShrink: 1 },
-  statsContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
-  statItem: { alignItems: 'center', flex: 1 },
-  statLabel: { fontSize: 12, color: '#666', marginBottom: 4 },
-  statValue: { fontSize: 14, fontWeight: 'bold', color: '#333' },
-  divider: { height: 1, backgroundColor: '#E0E0E0', marginTop: 10, width: '100%' },
-  ratingSection: { alignItems: 'center', marginVertical: 20 },
-  socialSection: { flexDirection: 'row', justifyContent: 'center', gap: 20, marginBottom: 20 },
-  socialIcon: { padding: 5 },
-  sectionDivider: { height: 1, backgroundColor: '#EEE', marginHorizontal: 20, marginBottom: 20 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  userName: { fontSize: 20, fontWeight: 'bold', color: "#222", flexShrink: 1 },
+  
+  statsContainer: { flexDirection: 'row', marginBottom: 12 },
+  statItem: { alignItems: 'flex-start', marginRight: 20 },
+  statLabel: { fontSize: 11, color: '#888', textTransform: 'uppercase', marginBottom: 2 },
+  statValue: { fontSize: 15, fontWeight: '700', color: '#333' },
+  dividerVertical: { width: 1, backgroundColor: '#E0E0E0', marginRight: 20, height: '80%', alignSelf: 'center' },
+
+  connectButton: {
+      backgroundColor: '#6C5CE7',
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      alignSelf: 'flex-start',
+      elevation: 2,
+      shadowColor: "#6C5CE7",
+      shadowOpacity: 0.3,
+      shadowRadius: 3,
+      shadowOffset: { width: 0, height: 2 },
+  },
+  connectButtonActive: {
+      backgroundColor: '#F3E5F5',
+      borderWidth: 1,
+      borderColor: '#6C5CE7',
+      elevation: 0,
+      shadowOpacity: 0,
+  },
+  connectButtonText: {
+      color: '#FFF',
+      fontSize: 14,
+      fontWeight: '600',
+  },
+  connectButtonTextActive: {
+      color: '#6C5CE7',
+      fontSize: 14,
+      fontWeight: '600',
+  },
+
+  sectionDivider: { height: 1, backgroundColor: '#F0F0F0', marginHorizontal: 20, marginVertical: 15 },
+
+  ratingSection: { alignItems: 'center', marginBottom: 10 },
+  ratingLabel: { fontSize: 12, color: '#888', marginBottom: 5, textTransform: 'uppercase' },
+  ratingScore: { fontSize: 14, color: '#555', fontWeight: '600', marginTop: 5 },
+
+  socialSection: { flexDirection: 'row', justifyContent: 'center', gap: 25, marginBottom: 5 },
+  socialIcon: { padding: 8, backgroundColor: '#FAFAFA', borderRadius: 50 },
+
   reviewsList: { paddingHorizontal: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 15, color: '#333' },
-  reviewCard: { marginBottom: 20 },
-  reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
-  reviewTitle: { fontSize: 16, color: '#333', fontWeight: '600' },
-  reviewTags: { fontSize: 12, color: '#666', marginBottom: 5 },
-  reviewText: { fontSize: 14, color: '#444', lineHeight: 20 },
-  reviewDivider: { height: 1, backgroundColor: '#EEE', marginTop: 15 },
-  addReviewSection: { paddingHorizontal: 20, marginBottom: 30, alignItems: 'center' },
+  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 15, color: '#333' },
+  
+  reviewCard: { marginBottom: 15, padding: 15, backgroundColor: '#FAFAFA', borderRadius: 12, borderWidth: 1, borderColor: '#F0F0F0' },
+  reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  reviewTitle: { fontSize: 15, color: '#333', fontWeight: '700' },
+  reviewTags: { fontSize: 11, color: '#6C5CE7', marginBottom: 6, fontWeight: '600' },
+  reviewText: { fontSize: 14, color: '#555', lineHeight: 20 },
+  
+  addReviewSection: { paddingHorizontal: 20, marginBottom: 20, alignItems: 'center' },
   addButton: { backgroundColor: '#F3E5F5', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 25, borderWidth: 1, borderColor: '#DDD', width: '100%', alignItems: 'center' },
   addButtonText: { color: '#5E35B1', fontWeight: 'bold' },
-  inputContainer: { width: '100%', backgroundColor: '#FAFAFA', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#DDD', shadowColor: "#000", shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  
+  inputContainer: { width: '100%', backgroundColor: '#FFF', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#DDD', shadowColor: "#000", shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   writeLabel: { marginBottom: 10, color: '#555', fontWeight: '600', textAlign: 'center' },
-  textInput: { backgroundColor: 'white', height: 80, borderRadius: 8, padding: 10, textAlignVertical: 'top', marginBottom: 15, borderWidth: 1, borderColor: '#EEE' },
+  textInput: { backgroundColor: '#FAFAFA', height: 80, borderRadius: 8, padding: 10, textAlignVertical: 'top', marginBottom: 15, borderWidth: 1, borderColor: '#EEE' },
   formButtons: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cancelText: { color: '#777', padding: 10 },
   submitButton: { backgroundColor: '#5E35B1', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
   submitText: { color: 'white', fontWeight: 'bold' },
-  myReviewBadge: { fontSize: 12, color: '#5E35B1', marginLeft: 8, fontWeight: 'bold' },
-  reviewActions: { flexDirection: 'row', marginLeft: 10, borderLeftWidth: 1, borderLeftColor: '#DDD', paddingLeft: 10 },
-  actionIcon: { marginLeft: 10, padding: 2 }
+  
+  myReviewBadge: { fontSize: 10, color: '#5E35B1', marginLeft: 6, backgroundColor: '#EDE7F6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden' },
+  reviewActions: { flexDirection: 'row', marginLeft: 10, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: '#DDD' },
+  actionIcon: { marginLeft: 12 }
 });

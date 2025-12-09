@@ -170,7 +170,6 @@ export default function GroupsScreen() {
           <MaterialCommunityIcons name="plus" size={32} color="#333" />
         </TouchableOpacity>
 
-        {/* MODALI */}
         <CreateGroupModal 
           visible={isCreateModalVisible}
           onClose={() => setCreateModalVisible(false)}
@@ -204,8 +203,7 @@ export default function GroupsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
-    paddingTop: StatusBar.currentHeight || 0,
+    backgroundColor: "#F8F9FA"
   },
   container: {
     flex: 1,
