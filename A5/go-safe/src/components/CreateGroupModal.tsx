@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { 
   View, 
   Text, 
@@ -26,57 +26,39 @@ export default function CreateGroupModal({ visible, onClose, onSubmit }: CreateG
   
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  
-  const [hour, setHour] = useState("20");
-  const [minute, setMinute] = useState("00");
-  const [isAm, setIsAm] = useState(false);
 
-  const minuteInputRef = useRef<TextInput>(null);
-
-  const handleHourChange = (text: string) => {
-    const numericText = text.replace(/[^0-9]/g, '');
-    if (numericText.length > 0 && parseInt(numericText) > 12) {
-       if (numericText.length === 2) return; 
-    }
-    setHour(numericText);
-    if (numericText.length === 2) {
-      minuteInputRef.current?.focus();
-    }
-  };
-
-  const handleMinuteChange = (text: string) => {
-    const numericText = text.replace(/[^0-9]/g, '');
-    if (numericText.length > 0 && parseInt(numericText) > 59) return; 
-    setMinute(numericText);
-  };
-
-  const handleBlurHour = () => {
-      let val = parseInt(hour);
-      if (isNaN(val) || val === 0) setHour("12");
-      else if (val < 10) setHour(`0${val}`);
-  };
-
-  const handleBlurMinute = () => {
-      let val = parseInt(minute);
-      if (isNaN(val)) setMinute("00");
-      else if (val < 10) setMinute(`0${val}`);
-  };
+  const defaultTime = new Date();
+  defaultTime.setHours(20, 0, 0, 0);
+  const [time, setTime] = useState(defaultTime);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-
-    if (selectedDate) {
-      setDate(selectedDate);
-    }
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (selectedDate) setDate(selectedDate);
   };
 
   const formatDate = (date: Date) => {
     const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Mesi partono da 0
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
+  };
+
+  const handleTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
+    if (Platform.OS === 'android') setShowTimePicker(false);
+    if (selectedTime) setTime(selectedTime);
+  };
+
+  const formatTime = (date: Date) => {
+    let hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    
+    const strMinutes = minutes < 10 ? '0' + minutes : minutes;
+    return `${hours}:${strMinutes} ${ampm}`;
   };
 
   const handleCreate = () => {
@@ -88,19 +70,21 @@ export default function CreateGroupModal({ visible, onClose, onSubmit }: CreateG
     const newGroup = {
       name: endLocation, 
       startZone: startLocation,
-      startTime: `${hour}:${minute} ${isAm ? 'AM' : 'PM'}`,
+      startTime: formatTime(time),
       date: formatDate(date),
       initial: endLocation.charAt(0).toUpperCase(),
     };
 
     onSubmit(newGroup);
     
-    // Reset
     setStartLocation("");
     setEndLocation("");
     setDate(new Date());
-    setHour("20");
-    setMinute("00");
+    
+    const resetTime = new Date();
+    resetTime.setHours(20, 0, 0, 0);
+    setTime(resetTime);
+    
     onClose();
   };
 
@@ -158,30 +142,25 @@ export default function CreateGroupModal({ visible, onClose, onSubmit }: CreateG
             </View>
           </View>
 
-          {/* --- SEZIONE DATA CON CALENDARIO --- */}
+          {/* --- SEZIONE DATA --- */}
           <View style={styles.cardSection}>
             <Text style={styles.sectionTitle}>Seleziona la data della partenza</Text>
             
-            <View style={styles.dateDisplayRow}>
-              <Text style={styles.bigDateText}>
-                {formatDate(date)}
-              </Text>
+            <View style={styles.displayRow}>
+              <Text style={styles.bigText}>{formatDate(date)}</Text>
               <Feather name="calendar" size={24} color="#333" />
             </View>
 
-            {/* Invece di un TextInput, usiamo un bottone che apre il calendario */}
             <TouchableOpacity 
-                style={styles.dateInputBox} 
+                style={styles.pickerButton} 
                 onPress={() => setShowDatePicker(true)}
             >
               <Text style={styles.smallLabel}>Date (DD/MM/YYYY)</Text>
-              <Text style={styles.dateInputValue}>{formatDate(date)}</Text>
+              <Text style={styles.inputValue}>{formatDate(date)}</Text>
             </TouchableOpacity>
 
-            {/* Il Componente Calendario (Visibile solo quando showDatePicker è true o su iOS inline) */}
             {showDatePicker && (
               <DateTimePicker
-                testID="dateTimePicker"
                 value={date}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
@@ -192,74 +171,53 @@ export default function CreateGroupModal({ visible, onClose, onSubmit }: CreateG
               />
             )}
             
-            {/* Per iOS */}
             {Platform.OS === 'ios' && showDatePicker && (
                  <TouchableOpacity 
-                    style={{alignSelf: 'flex-end', marginTop: 10}} 
+                    style={styles.iosConfirmButton} 
                     onPress={() => setShowDatePicker(false)}
                  >
-                    <Text style={{color: '#6C5CE7', fontWeight: 'bold'}}>Conferma Data</Text>
+                    <Text style={styles.iosConfirmText}>Conferma Data</Text>
                  </TouchableOpacity>
             )}
-
           </View>
 
-          {/* Sezione Orario (Invariata) */}
+          {/* --- SEZIONE ORARIO (NATIVA) --- */}
           <View style={styles.cardSection}>
             <Text style={styles.sectionTitle}>Scegli l'orario della partenza</Text>
-            <View style={styles.timeContainer}>
-              <View>
-                <View style={[styles.timeBox, styles.activeTimeBox]}>
-                  <TextInput 
-                    style={styles.timeText} 
-                    value={hour} 
-                    onChangeText={handleHourChange}
-                    onBlur={handleBlurHour}
-                    keyboardType="number-pad"
-                    maxLength={2}
-                    selectTextOnFocus
-                  />
-                </View>
-                <Text style={styles.timeLabel}>Hour</Text>
-              </View>
-              <Text style={styles.colon}>:</Text>
-              <View>
-                <View style={styles.timeBox}>
-                  <TextInput 
-                    ref={minuteInputRef}
-                    style={styles.timeText} 
-                    value={minute} 
-                    onChangeText={handleMinuteChange} 
-                    onBlur={handleBlurMinute}
-                    keyboardType="number-pad"
-                    maxLength={2}
-                    selectTextOnFocus
-                  />
-                </View>
-                <Text style={styles.timeLabel}>Minute</Text>
-              </View>
-              <View style={styles.amPmContainer}>
-                <TouchableOpacity 
-                  style={[styles.amPmButton, isAm && styles.amPmActive]}
-                  onPress={() => setIsAm(true)}
-                >
-                  <Text style={styles.amPmText}>AM</Text>
-                </TouchableOpacity>
-                <View style={styles.divider} />
-                <TouchableOpacity 
-                  style={[styles.amPmButton, !isAm && styles.amPmActive]}
-                  onPress={() => setIsAm(false)}
-                >
-                  <Text style={styles.amPmText}>PM</Text>
-                </TouchableOpacity>
-              </View>
+            
+            <View style={styles.displayRow}>
+               <Text style={styles.bigText}>{formatTime(time)}</Text>
+               <MaterialCommunityIcons name="clock-time-four-outline" size={24} color="#333" />
             </View>
-            <View style={styles.clockFooter}>
-                <MaterialCommunityIcons name="clock-time-four-outline" size={24} color="#555" />
-                <Text style={{color: '#666', fontSize: 12}}>
-                    {hour}:{minute} {isAm ? 'AM' : 'PM'}
-                </Text>
-            </View>
+
+            <TouchableOpacity 
+                style={styles.pickerButton} 
+                onPress={() => setShowTimePicker(true)}
+            >
+              <Text style={styles.smallLabel}>Time (HH:MM)</Text>
+              <Text style={styles.inputValue}>{formatTime(time)}</Text>
+            </TouchableOpacity>
+
+            {showTimePicker && (
+              <DateTimePicker
+                value={time}
+                mode="time"
+                is24Hour={false}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleTimeChange}
+                accentColor="#6C5CE7"
+                textColor="#333"
+              />
+            )}
+
+            {Platform.OS === 'ios' && showTimePicker && (
+                 <TouchableOpacity 
+                    style={styles.iosConfirmButton} 
+                    onPress={() => setShowTimePicker(false)}
+                 >
+                    <Text style={styles.iosConfirmText}>Conferma Orario</Text>
+                 </TouchableOpacity>
+            )}
           </View>
 
           <TouchableOpacity style={styles.createButton} onPress={handleCreate}>
@@ -323,14 +281,15 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     fontWeight: "600",
   },
-  dateDisplayRow: {
+  displayRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 15,
   },
-  bigDateText: { fontSize: 24, color: "#222" },
-  dateInputBox: {
+  bigText: { fontSize: 24, color: "#222" },
+  
+  pickerButton: {
     borderWidth: 2,
     borderColor: "#6C5CE7",
     borderRadius: 6,
@@ -343,58 +302,20 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     fontWeight: "bold",
   },
-  dateInputValue: {
+  inputValue: {
     fontSize: 16,
     color: "#333",
   },
-  timeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 15,
+  
+  iosConfirmButton: {
+      alignSelf: 'flex-end', 
+      marginTop: 10
   },
-  timeBox: {
-    backgroundColor: "#E0E0E0",
-    borderRadius: 8,
-    width: 80,
-    height: 70,
-    justifyContent: "center",
-    alignItems: "center",
-    flexDirection: 'row',
+  iosConfirmText: {
+      color: '#6C5CE7', 
+      fontWeight: 'bold'
   },
-  activeTimeBox: {
-    backgroundColor: "#EADDFF",
-    borderWidth: 1,
-    borderColor: "#6C5CE7",
-  },
-  timeText: {
-    fontSize: 32,
-    color: "#333",
-    textAlign: 'center',
-    width: '100%',
-  },
-  timeLabel: { fontSize: 12, color: "#777", marginTop: 5, textAlign: 'center' },
-  colon: { fontSize: 40, fontWeight: "bold", marginBottom: 20 },
-  amPmContainer: {
-    backgroundColor: "#E0E0E0",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#AAA",
-    overflow: "hidden",
-  },
-  amPmButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: "transparent",
-  },
-  amPmActive: { backgroundColor: "#FFCDD2" },
-  amPmText: { fontSize: 16, fontWeight: "bold", color: "#333" },
-  divider: { height: 1, backgroundColor: "#AAA" },
-  clockFooter: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center'
-  },
+
   createButton: {
     backgroundColor: "#6C5CE7",
     padding: 15,
