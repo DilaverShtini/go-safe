@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { View, StyleSheet, Alert, TouchableOpacity, Text, ActivityIndicator, Linking } from "react-native";
-import MapView, { Marker, MapPressEvent, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
+import MapView, { Marker, MapPressEvent, Polyline, PROVIDER_DEFAULT, Callout } from "react-native-maps";
 import * as Location from "expo-location";
 import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import SearchBar from "../../src/components/SearchBar";
@@ -446,7 +446,25 @@ export default function MapScreen() {
           </Marker>
         ))}
 
-        {selectedPoint && <Marker coordinate={selectedPoint} title="Punto Selezionato" pinColor="blue" opacity={0.7} />}
+        {selectedPoint && (
+          <Marker 
+            coordinate={selectedPoint} 
+            title="Punto Selezionato" 
+            pinColor="blue" 
+            opacity={0.7}
+            onPress={(e) => {
+              e.stopPropagation(); 
+              setSelectedPoint(null);
+            }}
+          >
+             <Callout tooltip>
+                <View style={styles.calloutContainer}>
+                    <Text style={styles.calloutTitle}>Nuova posizione</Text>
+                    <Text style={styles.calloutDesc}>(Tocca per rimuovere)</Text>
+                </View>
+             </Callout>
+          </Marker>
+        )}
       </MapView>
 
       <SearchBar onSearchLocation={handleDestinationSearch} />
@@ -592,5 +610,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'white'
+  },
+  calloutContainer: {
+    backgroundColor: "white",
+    padding: 10,
+    borderRadius: 8,
+    width: 160,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#eee',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2
+  },
+  calloutTitle: {
+    fontWeight: "bold",
+    fontSize: 14,
+    marginBottom: 4,
+    color: "#333",
+    textAlign: 'center'
+  },
+  calloutDesc: {
+    fontSize: 12,
+    color: "#e74c3c",
+    fontStyle: 'italic',
+    textAlign: 'center'
   },
 });
