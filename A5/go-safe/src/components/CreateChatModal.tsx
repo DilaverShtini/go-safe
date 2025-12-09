@@ -7,8 +7,8 @@ import {
   TouchableOpacity, 
   FlatList, 
   TextInput,
-  SafeAreaView
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 
 // Dati finti dei contatti disponibili per una nuova chat
