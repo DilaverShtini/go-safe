@@ -4,7 +4,6 @@ import {
   StyleSheet, 
   FlatList, 
   TouchableOpacity, 
-  SafeAreaView, 
   StatusBar,
   Text,
 } from "react-native";
@@ -15,6 +14,7 @@ import GroupsHeader from "../../src/components/GroupsHeader";
 import CreateGroupModal from "../../src/components/CreateGroupModal";
 import GroupDetailModal from "../../src/components/GroupDetailModal";
 import ConfirmationModal from "../../src/components/ConfirmationModal";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface GroupItem {
   id: string;

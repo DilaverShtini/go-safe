@@ -7,13 +7,14 @@ import {
   TouchableOpacity, 
   ScrollView, 
   Image,
-  SafeAreaView,
   Animated,
-  Easing
+  Easing,
+  ActivityIndicator
 } from "react-native";
 import { MaterialCommunityIcons, Feather, Ionicons } from "@expo/vector-icons";
 
 import UserProfileModal, { UserProfile } from "./UserProfileModal";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface GroupItem {
   id: string;
@@ -31,7 +32,7 @@ interface GroupDetailModalProps {
   onClose: () => void;
   onJoin: (groupId: string) => void;
   onLeave: (groupId: string) => void;
-  // onDelete rimosso
+  isLoading?: boolean;
 }
 
 const CURRENT_USER_PROFILE: UserProfile = {
@@ -68,24 +69,24 @@ const MOCK_PARTICIPANTS: UserProfile[] = [
     }
 ];
 
-export default function GroupDetailModal({ visible, group, onClose, onJoin, onLeave }: GroupDetailModalProps) {
+export default function GroupDetailModal({ visible, group, onClose, onJoin, onLeave, isLoading = false }: GroupDetailModalProps) {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isProfileVisible, setProfileVisible] = useState(false);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (visible && group && !group.isJoined) {
+    if (visible && group && !group.isJoined && !isLoading) {
         startPulseAnimation();
     } else {
         scaleAnim.setValue(1);
     }
-  }, [visible, group]);
+  }, [visible, group, isLoading]);
 
   const startPulseAnimation = () => {
       Animated.loop(
         Animated.sequence([
-            Animated.timing(scaleAnim, { toValue: 1.05, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+            Animated.timing(scaleAnim, { toValue: 1.03, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
             Animated.timing(scaleAnim, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
         ])
       ).start();
@@ -166,23 +167,39 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin, onLe
 
             <View style={styles.buttonContainer}>
                 {group.isJoined ? (
-                    // Se sei iscritto (Organizzatore o Partecipante), vedi sempre il tasto verde per uscire
                     <TouchableOpacity 
-                        style={[styles.actionButton, styles.joinedButton]}
+                        style={[styles.actionButton, styles.leaveButton]}
                         onPress={() => onLeave(group.id)}
+                        disabled={isLoading}
                     >
-                        <MaterialCommunityIcons name="check" size={20} color="white" style={{marginRight: 8}}/>
-                        <Text style={styles.joinedButtonText}>Fai parte del gruppo</Text>
-                        <Text style={styles.leaveHintText}>(Tocca per uscire)</Text>
+                        {isLoading ? (
+                            <ActivityIndicator size="small" color="#D32F2F" />
+                        ) : (
+                            <>
+                                <MaterialCommunityIcons name="exit-to-app" size={22} color="#D32F2F" style={{marginRight: 8}}/>
+                                <Text style={styles.leaveButtonText}>Abbandona Gruppo</Text>
+                            </>
+                        )}
                     </TouchableOpacity>
                 ) : (
                     <AnimatedTouchableOpacity 
-                        style={[styles.actionButton, { transform: [{ scale: scaleAnim }] }]} 
+                        style={[
+                            styles.actionButton, 
+                            styles.joinButton,
+                            { transform: [{ scale: isLoading ? 1 : scaleAnim }] }
+                        ]} 
                         onPress={() => onJoin(group.id)}
                         activeOpacity={0.8}
+                        disabled={isLoading}
                     >
-                        <Text style={styles.actionButtonText}>Richiedi di partecipare</Text>
-                        <MaterialCommunityIcons name="arrow-right" size={20} color="#333" style={{marginLeft: 8}}/>
+                        {isLoading ? (
+                            <ActivityIndicator size="small" color="#FFF" />
+                        ) : (
+                            <>
+                                <MaterialCommunityIcons name="account-plus" size={24} color="#FFF" style={{marginRight: 8}}/>
+                                <Text style={styles.joinButtonText}>Unisciti al Gruppo</Text>
+                            </>
+                        )}
                     </AnimatedTouchableOpacity>
                 )}
             </View>
@@ -220,27 +237,40 @@ const styles = StyleSheet.create({
   iconCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#D1C4E9", justifyContent: "center", alignItems: "center", marginRight: 15 },
   infoText: { fontSize: 16, fontWeight: "600", color: "#333" },
   
-  buttonContainer: { marginTop: 30, alignItems: "center" },
+  buttonContainer: { marginTop: 30, alignItems: "center", width: "100%" },
   
   actionButton: {
-    backgroundColor: "#F3E5F5",
-    paddingVertical: 15,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: "#DDD",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 16,
     width: "100%",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    justifyContent: "center",
     flexDirection: 'row',
-    justifyContent: 'center'
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 4 },
   },
-  actionButtonText: { color: "#333", fontWeight: "bold", fontSize: 16 },
-  
-  joinedButton: { backgroundColor: "#4CAF50", borderColor: "#388E3C", flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
-  joinedButtonText: { color: "white", fontWeight: "bold", fontSize: 16 },
-  leaveHintText: { color: "rgba(255,255,255,0.8)", fontSize: 12, marginLeft: 8, fontStyle: 'italic', fontWeight: 'normal' },
+
+  joinButton: {
+    backgroundColor: "#6C5CE7",
+  },
+  joinButtonText: { 
+    color: "#FFF", 
+    fontWeight: "bold", 
+    fontSize: 18 
+  },
+
+  leaveButton: {
+    backgroundColor: "#FFEBEE",
+    borderWidth: 1,
+    borderColor: "#FFCDD2"
+  },
+  leaveButtonText: { 
+    color: "#D32F2F",
+    fontWeight: "bold", 
+    fontSize: 16 
+  },
 });
