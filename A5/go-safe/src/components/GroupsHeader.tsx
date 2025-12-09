@@ -3,7 +3,6 @@ import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-// Definiamo le props che il componente si aspetta
 interface GroupsHeaderProps {
   searchQuery: string;
   onSearchChange: (text: string) => void;
@@ -18,10 +17,10 @@ export default function GroupsHeader({ searchQuery, onSearchChange }: GroupsHead
         <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Cerca gruppo"
+          placeholder="Cerca partenza o destinazione..."
           placeholderTextColor="#999"
           value={searchQuery}
-          onChangeText={onSearchChange} // Chiama la funzione del genitore
+          onChangeText={onSearchChange}
           autoCapitalize="none"
         />
         {searchQuery.length > 0 && (

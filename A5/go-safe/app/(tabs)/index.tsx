@@ -17,8 +17,8 @@ interface Report {
 }
 
 interface RouteInfo {
-  distance: number; // Metri
-  duration: number; // Secondi
+  distance: number;
+  duration: number;
 }
 
 const TYPE_ICONS: Record<string, any> = {
@@ -43,8 +43,7 @@ const DEFAULT_REGION = {
   longitudeDelta: 0.05,
 };
 
-// Raggio di sicurezza per considerare un pericolo vicino (circa 90 metri)
-const SAFE_DISTANCE_THRESHOLD = 0.0009; 
+const SAFE_DISTANCE_THRESHOLD = 0.0005; 
 
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
@@ -60,53 +59,35 @@ export default function MapScreen() {
   const [selectedPoint, setSelectedPoint] = useState<{ latitude: number; longitude: number } | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
-
   const [lastReportId, setLastReportId] = useState<number | null>(null);
+
   useEffect(() => {
     (async () => {
       try {
         let { status } = await Location.getForegroundPermissionsAsync();
-
         if (status !== 'granted') {
            const request = await Location.requestForegroundPermissionsAsync();
            status = request.status;
         }
-
         if (status !== 'granted') {
-          Alert.alert(
-            "Permesso Negato",
-            "Per visualizzare la tua posizione sulla mappa e calcolare i percorsi, devi abilitare l'accesso alla localizzazione nelle impostazioni.",
-            [
-              { text: "Annulla", style: "cancel" },
-              { text: "Apri Impostazioni", onPress: () => Linking.openSettings() }
-            ]
-          );
+          Alert.alert("Permesso Negato", "Serve la posizione per navigare.", [{ text: "Apri Impostazioni", onPress: () => Linking.openSettings() }]);
           return;
         }
-
         let location = await Location.getCurrentPositionAsync({});
         setUserLocation(location.coords);
-
         mapRef.current?.animateToRegion({
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         }, 1000); 
-
       } catch (error) {
-        console.log("Errore recupero posizione", error);
+        console.log("Errore posizione", error);
       }
     })();
   }, []);
 
   const handleCenterOnUser = async () => {
-    const { status } = await Location.getForegroundPermissionsAsync();
-    if (status !== 'granted') {
-        Alert.alert("Errore", "Permesso di localizzazione non concesso.");
-        return;
-    }
-
     let location = await Location.getCurrentPositionAsync({});
     setUserLocation(location.coords);
     mapRef.current?.animateToRegion({
@@ -132,41 +113,35 @@ export default function MapScreen() {
   };
 
   const formatDistance = (meters: number) => {
-    if (meters >= 1000) {
-        return `${(meters / 1000).toFixed(1)} km`;
-    }
-    return `${Math.round(meters)} m`;
+    return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`;
   };
 
-  const generateOffsetWaypoints = (start: { latitude: number, longitude: number }, end: { latitude: number, longitude: number }) => {
-    const midLat = (start.latitude + end.latitude) / 2;
-    const midLon = (start.longitude + end.longitude) / 2;
-    
-    const dLat = end.latitude - start.latitude;
-    const dLon = end.longitude - start.longitude;
-    
-    // 150m è sufficiente per prendere la "via parallela" in una città standard.
-    const offsetAmount = 0.0015; 
+  const calculateRouteDanger = (routeGeoJson: any) => {
+      const pathPoints = routeGeoJson.geometry.coordinates.map((c: number[]) => ({ latitude: c[1], longitude: c[0] }));
+      let dangerCount = 0;
 
-    const wp1 = {
-        latitude: midLat - (dLon * 0.5), 
-        longitude: midLon + (dLat * 0.5)
-    };
-    
-    const dist1 = Math.sqrt(Math.pow(wp1.latitude - midLat, 2) + Math.pow(wp1.longitude - midLon, 2));
-    const ratio1 = offsetAmount / (dist1 || 1);
-    
-    const alt1 = {
-        latitude: midLat + (wp1.latitude - midLat) * ratio1,
-        longitude: midLon + (wp1.longitude - midLon) * ratio1
-    };
+      for (const report of reports) {
+          for (let i = 0; i < pathPoints.length; i++) {
+              const point = pathPoints[i];
+              if (getDistanceScore(point, report) < SAFE_DISTANCE_THRESHOLD) {
+                  dangerCount++;
+                  break; 
+              }
+          }
+      }
+      return dangerCount;
+  };
 
-    const alt2 = {
-        latitude: midLat - (alt1.latitude - midLat),
-        longitude: midLon - (alt1.longitude - midLon)
-    };
-
-    return [alt1, alt2];
+  const getDetourPoints = (start: any, end: any) => {
+      const midLat = (start.latitude + end.latitude) / 2;
+      const midLon = (start.longitude + end.longitude) / 2;
+      const offset = 0.00150;
+      return [
+          { latitude: midLat + offset, longitude: midLon },
+          { latitude: midLat - offset, longitude: midLon },
+          { latitude: midLat, longitude: midLon + offset },
+          { latitude: midLat, longitude: midLon - offset },
+      ];
   };
 
   const fetchRoute = async (start: { latitude: number, longitude: number }, end: { latitude: number, longitude: number }) => {
@@ -175,113 +150,80 @@ export default function MapScreen() {
     setRouteInfo(null);
     setRouteCoordinates([]);
 
+    const baseUrl = "https://router.project-osrm.org/route/v1/foot"; 
+
     try {
-      const baseUrl = "https://routing.openstreetmap.de/routed-foot/route/v1/foot";
-      
+      let candidateRoutes: any[] = [];
+
       const urlDirect = `${baseUrl}/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson&alternatives=true`;
+      const respDirect = await fetch(urlDirect).then(r => r.json()).catch(() => null);
+      if (respDirect && respDirect.routes) {
+          candidateRoutes = [...candidateRoutes, ...respDirect.routes];
+      }
 
-      const [wp1, wp2] = generateOffsetWaypoints(start, end);
-      
-      const urlAlt1 = `${baseUrl}/${start.longitude},${start.latitude};${wp1.longitude},${wp1.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson`;
-      const urlAlt2 = `${baseUrl}/${start.longitude},${start.latitude};${wp2.longitude},${wp2.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson`;
+      let bestStandardDanger = Infinity;
+      if (candidateRoutes.length > 0) {
+          bestStandardDanger = Math.min(...candidateRoutes.map(r => calculateRouteDanger(r)));
+      }
 
-      const results = await Promise.all([
-          fetch(urlDirect).then(r => r.json()).catch(e => null),
-          fetch(urlAlt1).then(r => r.json()).catch(e => null),
-          fetch(urlAlt2).then(r => r.json()).catch(e => null)
-      ]);
+      if (bestStandardDanger > 0) {
+          console.log("Percorsi diretti pericolosi. Calcolo deviazioni...");
+          const detours = getDetourPoints(start, end);
+          
+          const detourPromises = detours.map(wp => 
+              fetch(`${baseUrl}/${start.longitude},${start.latitude};${wp.longitude},${wp.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson`)
+              .then(r => r.json())
+              .catch(() => null)
+          );
 
-      let allRoutes: any[] = [];
+          const detourResults = await Promise.all(detourPromises);
+          detourResults.forEach(res => {
+              if (res && res.routes && res.routes.length > 0) {
+                  candidateRoutes.push(res.routes[0]);
+              }
+          });
+      }
 
-      results.forEach((json, index) => {
-          if (json && json.code === 'Ok' && json.routes) {
-              json.routes.forEach((r: any) => {
-                   r._sourceIndex = index; 
-                   allRoutes.push(r);
-              });
-          }
-      });
-
-      if (allRoutes.length === 0) {
-        Alert.alert("Errore", "Impossibile trovare percorsi validi.");
+      if (candidateRoutes.length === 0) {
+        Alert.alert("Errore", "Nessun percorso trovato.");
         return;
       }
 
-      let bestRoute = null;
-      let lowestDangerCount = Infinity;
-      let bestRouteDistance = Infinity; 
-      let isAlternativeSelected = false;
-
-      for (const route of allRoutes) {
-          const pathPoints = route.geometry.coordinates.map((c: number[]) => ({ lat: c[1], lon: c[0] }));
-          let currentRouteDangerCount = 0;
-
-          for (let i = 0; i < pathPoints.length; i += 2) { 
-              const point = pathPoints[i];
-              const pointObj = {latitude: point.lat, longitude: point.lon};
-              
-              const hit = reports.some(report => 
-                  getDistanceScore(pointObj, report) < SAFE_DISTANCE_THRESHOLD
-              );
-              
-              if (hit) {
-                  currentRouteDangerCount++;
-                  i += 10;
-              }
-          }
-
-          console.log(`Rotta trovata: Distanza ${route.distance}m, Pericoli: ${currentRouteDangerCount}`);
-
-          if (currentRouteDangerCount < lowestDangerCount) {
-              lowestDangerCount = currentRouteDangerCount;
-              bestRoute = route;
-              bestRouteDistance = route.distance;
-              isAlternativeSelected = (route !== allRoutes[0]);
-          } 
-          else if (currentRouteDangerCount === lowestDangerCount) {
-              if (route.distance < bestRouteDistance) {
-                  bestRoute = route;
-                  bestRouteDistance = route.distance;
-                  isAlternativeSelected = (route !== allRoutes[0]);
-              }
-          }
-      }
-
-      // Fallback
-      if (!bestRoute) bestRoute = allRoutes[0];
-
-      // Feedback Utente
-      if (lowestDangerCount === 0) {
-          setRouteStatus('safe');
-          if (isAlternativeSelected && reports.length > 0) {
-             Alert.alert("Percorso Ottimizzato", "Percorso deviato per evitare zone a rischio.");
-          }
-      } else {
-          setRouteStatus('danger');
-          Alert.alert("Attenzione", "Tutte le strade alternative attraversano zone segnalate.");
-      }
-
-      let finalDuration = bestRoute.duration;
-      const speedKmh = (bestRoute.distance / 1000) / (bestRoute.duration / 3600);
-      if (speedKmh > 6) {
-          finalDuration = bestRoute.distance / 1.25; // 1.25 m/s = 4.5 km/h
-      }
-
-      setRouteInfo({
-          distance: bestRoute.distance,
-          duration: finalDuration
-      });
-
-      const coordinates = bestRoute.geometry.coordinates.map((coord: number[]) => ({
-        latitude: coord[1],
-        longitude: coord[0],
+      const scoredRoutes = candidateRoutes.map(route => ({
+          route,
+          danger: calculateRouteDanger(route),
+          distance: route.distance
       }));
 
-      setRouteCoordinates(coordinates);
+      scoredRoutes.sort((a, b) => {
+          if (a.danger !== b.danger) return a.danger - b.danger; 
+          return a.distance - b.distance; 
+      });
+
+      const bestChoice = scoredRoutes[0];
+      const finalRoute = bestChoice.route;
+
+      if (bestChoice.danger === 0) {
+          setRouteStatus('safe');
+      } else {
+          setRouteStatus('danger');
+          Alert.alert("Attenzione", "Tutte le strade possibili passano vicino a una segnalazione.");
+      }
+
+      let duration = finalRoute.duration;
+      if ((finalRoute.distance / duration) > 1.5) duration = finalRoute.distance / 1.25; 
+
+      setRouteInfo({
+          distance: finalRoute.distance,
+          duration: duration
+      });
+
+      const coords = finalRoute.geometry.coordinates.map((c: number[]) => ({ latitude: c[1], longitude: c[0] }));
+      setRouteCoordinates(coords);
       
       setTimeout(() => {
-          mapRef.current?.fitToCoordinates(coordinates, {
-              edgePadding: { top: 80, right: 50, bottom: 250, left: 50 },
+          mapRef.current?.fitToCoordinates(coords, {
+              edgePadding: { top: 100, right: 50, bottom: 200, left: 50 },
               animated: true,
           });
       }, 100);
@@ -326,7 +268,6 @@ export default function MapScreen() {
 
   const handleCreateReport = (type: string, note: string) => {
     if (!selectedPoint) return;
-
     const newId = Date.now();
     const newReport: Report = {
       id: newId,
@@ -336,10 +277,10 @@ export default function MapScreen() {
       note: note,
       isMyReport: true,
     };
-
     setReports((prev) => [...prev, newReport]);
     setLastReportId(newId);
     setSelectedPoint(null);
+    setModalVisible(false);
   };
 
   const handleUndoReport = () => {
@@ -391,52 +332,17 @@ export default function MapScreen() {
             coordinate={{ latitude: report.latitude, longitude: report.longitude }}
             title={!report.isMyReport ? TYPE_LABELS[report.type] : undefined}
             description={!report.isMyReport ? report.note : undefined}
-            
             onPress={() => {
               if (report.isMyReport) {
-                const noteText = report.note && report.note.trim() !== "" 
-                    ? `Nota: "${report.note}"` 
-                    : "Nessuna nota aggiuntiva.";
-
-                Alert.alert(
-                  `Tipo segnalazione: ${TYPE_LABELS[report.type]}`,
-                  `${noteText}\n\nCosa vuoi fare?`,
-                  [
-                    { 
-                      text: "Elimina", 
-                      style: "destructive",
-                      onPress: () => {
-                        Alert.alert(
-                          "Sei sicuro?",
-                          "L'eliminazione è definitiva e non può essere annullata.",
-                          [
-                            { 
-                              text: "Elimina definitivamente", 
-                              style: "destructive", 
-                              onPress: () => {
-                                setReports((prev) => prev.filter((r) => r.id !== report.id));
-                              }
-                            },
-                            { text: "Annulla", style: "cancel" }
-                          ]
-                        );
-                      }
-                    },
-                    { 
-                      text: "Chiudi", 
-                      style: "cancel"
-                    } 
-                  ]
-                );
+                Alert.alert("Gestione", "Eliminare segnalazione?", [
+                    { text: "Elimina", style: "destructive", onPress: () => setReports(p => p.filter(r => r.id !== report.id)) },
+                    { text: "Annulla", style: "cancel" }
+                ]);
               }
             }}
           >
             <View style={[styles.markerBg, { backgroundColor: TYPE_COLORS[report.type] }]}>
-              <MaterialCommunityIcons 
-                name={TYPE_ICONS[report.type]} 
-                size={20} 
-                color="white" 
-              />
+              <MaterialCommunityIcons name={TYPE_ICONS[report.type]} size={20} color="white" />
               {report.isMyReport && (
                 <View style={styles.myReportBadge}>
                   <MaterialCommunityIcons name="account" size={10} color="white" />
@@ -447,15 +353,8 @@ export default function MapScreen() {
         ))}
 
         {selectedPoint && (
-          <Marker 
-            coordinate={selectedPoint} 
-            title="Punto Selezionato" 
-            pinColor="blue" 
-            opacity={0.7}
-            onPress={(e) => {
-              e.stopPropagation(); 
-              setSelectedPoint(null);
-            }}
+          <Marker coordinate={selectedPoint} title="Punto Selezionato" pinColor="blue" opacity={0.7}
+            onPress={(e) => { e.stopPropagation(); setSelectedPoint(null); }}
           >
              <Callout tooltip>
                 <View style={styles.calloutContainer}>
@@ -480,11 +379,11 @@ export default function MapScreen() {
                     <FontAwesome5 name="walking" size={20} color="#333" style={{marginRight: 10}} />
                     <Text style={styles.infoTime}>{formatDuration(routeInfo.duration)}</Text>
                   </View>
-                  <Text style={styles.infoDistance}>Distanza: {formatDistance(routeInfo.distance)}</Text>
+                  <Text style={styles.infoDistance}>
+                      A piedi • {formatDistance(routeInfo.distance)}
+                  </Text>
               </View>
-              
               <View style={styles.divider} />
-
               <TouchableOpacity style={styles.closeBtn} onPress={clearNavigation}>
                   <Ionicons name="close" size={24} color="#e74c3c" />
                   <Text style={styles.closeBtnText}>Esci</Text>
@@ -493,12 +392,7 @@ export default function MapScreen() {
       )}
 
       <TouchableOpacity 
-        style={[
-            styles.myLocationButton, 
-            routeInfo 
-                ? { bottom: 170 } 
-                : { bottom: 110 } 
-        ]} 
+        style={[styles.myLocationButton, routeInfo ? { bottom: 170 } : { bottom: 110 }]} 
         onPress={handleCenterOnUser}
       >
         <MaterialCommunityIcons name="crosshairs-gps" size={28} color="#333" />
@@ -563,80 +457,24 @@ const styles = StyleSheet.create({
       shadowRadius: 5,
       zIndex: 900,
   },
-  infoTextContainer: {
-      flex: 1,
-  },
-  infoRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 5,
-  },
-  infoTime: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      color: '#2d3436',
-  },
-  infoDistance: {
-      fontSize: 16,
-      color: '#636e72',
-      marginLeft: 3, 
-  },
-  divider: {
-      width: 1,
-      height: '80%',
-      backgroundColor: '#dfe6e9',
-      marginHorizontal: 15,
-  },
-  closeBtn: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 10,
-  },
-  closeBtnText: {
-      color: '#e74c3c',
-      fontSize: 14,
-      fontWeight: '600',
-      marginTop: 4,
-  },
+  infoTextContainer: { flex: 1 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
+  infoTime: { fontSize: 24, fontWeight: 'bold', color: '#2d3436' },
+  infoDistance: { fontSize: 16, color: '#636e72', marginLeft: 3 },
+  divider: { width: 1, height: '80%', backgroundColor: '#dfe6e9', marginHorizontal: 15 },
+  closeBtn: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
+  closeBtnText: { color: '#e74c3c', fontSize: 14, fontWeight: '600', marginTop: 4 },
   myReportBadge: {
-    position: 'absolute',
-    bottom: -5,
-    right: -5,
-    backgroundColor: '#2ecc71',
-    borderRadius: 8,
-    width: 16,
-    height: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'white'
+    position: 'absolute', bottom: -5, right: -5, backgroundColor: '#2ecc71',
+    borderRadius: 8, width: 16, height: 16, justifyContent: 'center',
+    alignItems: 'center', borderWidth: 1, borderColor: 'white'
   },
   calloutContainer: {
-    backgroundColor: "white",
-    padding: 10,
-    borderRadius: 8,
-    width: 160,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#eee',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2
+    backgroundColor: "white", padding: 10, borderRadius: 8, width: 160,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#eee',
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1,
+    shadowRadius: 4, elevation: 2
   },
-  calloutTitle: {
-    fontWeight: "bold",
-    fontSize: 14,
-    marginBottom: 4,
-    color: "#333",
-    textAlign: 'center'
-  },
-  calloutDesc: {
-    fontSize: 12,
-    color: "#e74c3c",
-    fontStyle: 'italic',
-    textAlign: 'center'
-  },
+  calloutTitle: { fontWeight: "bold", fontSize: 14, marginBottom: 4, color: "#333", textAlign: 'center' },
+  calloutDesc: { fontSize: 12, color: "#e74c3c", fontStyle: 'italic', textAlign: 'center' },
 });
