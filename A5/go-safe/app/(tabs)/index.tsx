@@ -43,7 +43,7 @@ const DEFAULT_REGION = {
   longitudeDelta: 0.05,
 };
 
-const SAFE_DISTANCE_THRESHOLD = 0.0005; 
+const SAFE_DISTANCE_THRESHOLD = 0.0012; 
 
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
@@ -114,6 +114,23 @@ export default function MapScreen() {
 
   const formatDistance = (meters: number) => {
     return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`;
+  };
+
+  const pointToSegmentDistance = (
+    p: { latitude: number; longitude: number },
+    v: { latitude: number; longitude: number },
+    w: { latitude: number; longitude: number }
+  ) => {
+    const l2 = Math.pow(v.latitude - w.latitude, 2) + Math.pow(v.longitude - w.longitude, 2);
+    if (l2 === 0) return Math.sqrt(Math.pow(p.latitude - v.latitude, 2) + Math.pow(p.longitude - v.longitude, 2));
+
+    let t = ((p.latitude - v.latitude) * (w.latitude - v.latitude) + (p.longitude - v.longitude) * (w.longitude - v.longitude)) / l2;
+    t = Math.max(0, Math.min(1, t));
+
+    const projectionLat = v.latitude + t * (w.latitude - v.latitude);
+    const projectionLon = v.longitude + t * (w.longitude - v.longitude);
+
+    return Math.sqrt(Math.pow(p.latitude - projectionLat, 2) + Math.pow(p.longitude - projectionLon, 2));
   };
 
   const calculateRouteDanger = (routeGeoJson: any) => {
