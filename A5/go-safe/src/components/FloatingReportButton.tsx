@@ -1,15 +1,16 @@
 import React from "react";
-import { TouchableOpacity, StyleSheet } from "react-native";
+import { TouchableOpacity, StyleSheet, ViewStyle, StyleProp } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 interface FloatingReportButtonProps {
   onPress: () => void;
+  style?: StyleProp<ViewStyle>;
 }
 
-export default function FloatingReportButton({ onPress }: FloatingReportButtonProps) {
+export default function FloatingReportButton({ onPress, style }: FloatingReportButtonProps) {
   return (
-    <TouchableOpacity style={styles.reportButton} onPress={onPress}>
-      <Ionicons name="warning" size={40} color="black" />
+    <TouchableOpacity style={[styles.reportButton, style]} onPress={onPress}>
+      <Ionicons name="warning" size={36} color="black" />
     </TouchableOpacity>
   );
 }
@@ -17,17 +18,18 @@ export default function FloatingReportButton({ onPress }: FloatingReportButtonPr
 const styles = StyleSheet.create({
   reportButton: {
     position: "absolute",
-    bottom: 10,
-    right: 10,
+    bottom: 20,
+    right: 20,
     backgroundColor: "#b2f200",
-    width: 70,
-    height: 70,
-    borderRadius: 40,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 5,
+    zIndex: 999,
   },
 });

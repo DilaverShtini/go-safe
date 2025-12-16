@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, StyleSheet, Alert, TouchableOpacity, Text, ActivityIndicator, Linking } from "react-native";
+import { 
+  View, 
+  StyleSheet, 
+  Alert, 
+  TouchableOpacity, 
+  Text, 
+  ActivityIndicator, 
+  Linking, 
+  Platform 
+} from "react-native";
 import MapView, { Marker, MapPressEvent, Polyline, PROVIDER_DEFAULT, Callout } from "react-native-maps";
 import * as Location from "expo-location";
 import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from "@expo/vector-icons";
@@ -7,6 +16,7 @@ import SearchBar from "../../src/components/SearchBar";
 import FloatingReportButton from "../../src/components/FloatingReportButton";
 import ReportModal from "../../src/components/ReportModal";
 
+// --- INTERFACCE ---
 interface Report {
   id: number;
   latitude: number;
@@ -21,6 +31,7 @@ interface RouteInfo {
   duration: number;
 }
 
+// --- COSTANTI ---
 const TYPE_ICONS: Record<string, any> = {
   danger: "alert-octagon", darkness: "lightbulb-off", desolate: "road-variant",
   stray: "dog-side", suspicious: "account-alert", weather: "weather-lightning-rainy",
@@ -48,6 +59,7 @@ const SAFE_DISTANCE_THRESHOLD = 0.0012;
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
   
+  // --- STATE ---
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [destination, setDestination] = useState<{ latitude: number; longitude: number } | null>(null);
   
@@ -61,43 +73,68 @@ export default function MapScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [lastReportId, setLastReportId] = useState<number | null>(null);
 
+  // --- 1. GESTIONE PERMESSI E POSIZIONE ---
   useEffect(() => {
     (async () => {
       try {
+        // Controllo servizi attivi
+        const servicesEnabled = await Location.hasServicesEnabledAsync();
+        if (!servicesEnabled) {
+          Alert.alert("GPS Disattivato", "Attiva la geolocalizzazione per usare la mappa.", [{ text: "OK" }]);
+          return;
+        }
+
+        // Controllo permessi
         let { status } = await Location.getForegroundPermissionsAsync();
         if (status !== 'granted') {
            const request = await Location.requestForegroundPermissionsAsync();
            status = request.status;
         }
+
         if (status !== 'granted') {
-          Alert.alert("Permesso Negato", "Serve la posizione per navigare.", [{ text: "Apri Impostazioni", onPress: () => Linking.openSettings() }]);
+          Alert.alert("Permesso Negato", "L'app necessita della posizione per funzionare.", [
+            { text: "Impostazioni", onPress: () => Linking.openSettings() },
+            { text: "Annulla", style: "cancel" }
+          ]);
           return;
         }
-        let location = await Location.getCurrentPositionAsync({});
+
+        // Ottieni posizione
+        let location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         setUserLocation(location.coords);
+        
         mapRef.current?.animateToRegion({
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         }, 1000); 
+
       } catch (error) {
-        console.log("Errore posizione", error);
+        console.log("Errore inizializzazione mappa:", error);
       }
     })();
   }, []);
 
   const handleCenterOnUser = async () => {
-    let location = await Location.getCurrentPositionAsync({});
-    setUserLocation(location.coords);
-    mapRef.current?.animateToRegion({
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
-    });
+    try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+        
+        let location = await Location.getCurrentPositionAsync({});
+        setUserLocation(location.coords);
+        mapRef.current?.animateToRegion({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+        });
+    } catch (e) {
+        console.log("Errore center user:", e);
+    }
   };
 
+  // --- 2. LOGICA NAVIGAZIONE ---
   const getDistanceScore = (pt1: {latitude: number, longitude: number}, pt2: {latitude: number, longitude: number}) => {
     return Math.sqrt(Math.pow(pt1.latitude - pt2.latitude, 2) + Math.pow(pt1.longitude - pt2.longitude, 2));
   };
@@ -116,27 +153,9 @@ export default function MapScreen() {
     return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`;
   };
 
-  const pointToSegmentDistance = (
-    p: { latitude: number; longitude: number },
-    v: { latitude: number; longitude: number },
-    w: { latitude: number; longitude: number }
-  ) => {
-    const l2 = Math.pow(v.latitude - w.latitude, 2) + Math.pow(v.longitude - w.longitude, 2);
-    if (l2 === 0) return Math.sqrt(Math.pow(p.latitude - v.latitude, 2) + Math.pow(p.longitude - v.longitude, 2));
-
-    let t = ((p.latitude - v.latitude) * (w.latitude - v.latitude) + (p.longitude - v.longitude) * (w.longitude - v.longitude)) / l2;
-    t = Math.max(0, Math.min(1, t));
-
-    const projectionLat = v.latitude + t * (w.latitude - v.latitude);
-    const projectionLon = v.longitude + t * (w.longitude - v.longitude);
-
-    return Math.sqrt(Math.pow(p.latitude - projectionLat, 2) + Math.pow(p.longitude - projectionLon, 2));
-  };
-
   const calculateRouteDanger = (routeGeoJson: any) => {
       const pathPoints = routeGeoJson.geometry.coordinates.map((c: number[]) => ({ latitude: c[1], longitude: c[0] }));
       let dangerCount = 0;
-
       for (const report of reports) {
           for (let i = 0; i < pathPoints.length; i++) {
               const point = pathPoints[i];
@@ -171,7 +190,6 @@ export default function MapScreen() {
 
     try {
       let candidateRoutes: any[] = [];
-
       const urlDirect = `${baseUrl}/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson&alternatives=true`;
       const respDirect = await fetch(urlDirect).then(r => r.json()).catch(() => null);
       if (respDirect && respDirect.routes) {
@@ -184,20 +202,15 @@ export default function MapScreen() {
       }
 
       if (bestStandardDanger > 0) {
-          console.log("Percorsi diretti pericolosi. Calcolo deviazioni...");
           const detours = getDetourPoints(start, end);
-          
           const detourPromises = detours.map(wp => 
               fetch(`${baseUrl}/${start.longitude},${start.latitude};${wp.longitude},${wp.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson`)
               .then(r => r.json())
               .catch(() => null)
           );
-
           const detourResults = await Promise.all(detourPromises);
           detourResults.forEach(res => {
-              if (res && res.routes && res.routes.length > 0) {
-                  candidateRoutes.push(res.routes[0]);
-              }
+              if (res && res.routes && res.routes.length > 0) candidateRoutes.push(res.routes[0]);
           });
       }
 
@@ -218,24 +231,20 @@ export default function MapScreen() {
       });
 
       const bestChoice = scoredRoutes[0];
-      const finalRoute = bestChoice.route;
-
-      if (bestChoice.danger === 0) {
-          setRouteStatus('safe');
-      } else {
+      
+      if (bestChoice.danger > 0) {
           setRouteStatus('danger');
           Alert.alert("Attenzione", "Tutte le strade possibili passano vicino a una segnalazione.");
+      } else {
+          setRouteStatus('safe');
       }
 
-      let duration = finalRoute.duration;
-      if ((finalRoute.distance / duration) > 1.5) duration = finalRoute.distance / 1.25; 
+      let duration = bestChoice.route.duration;
+      if ((bestChoice.route.distance / duration) > 1.5) duration = bestChoice.route.distance / 1.25; 
 
-      setRouteInfo({
-          distance: finalRoute.distance,
-          duration: duration
-      });
+      setRouteInfo({ distance: bestChoice.route.distance, duration: duration });
 
-      const coords = finalRoute.geometry.coordinates.map((c: number[]) => ({ latitude: c[1], longitude: c[0] }));
+      const coords = bestChoice.route.geometry.coordinates.map((c: number[]) => ({ latitude: c[1], longitude: c[0] }));
       setRouteCoordinates(coords);
       
       setTimeout(() => {
@@ -270,11 +279,10 @@ export default function MapScreen() {
 
   const handleMapPress = (e: MapPressEvent) => {
     if (modalVisible) return;
-    if (!destination) {
-        setSelectedPoint(e.nativeEvent.coordinate);
-    }
+    setSelectedPoint(e.nativeEvent.coordinate);
   };
 
+  // --- 3. GESTIONE SEGNALAZIONI ---
   const handleFloatingButtonPress = () => {
     if (!selectedPoint) {
       Alert.alert("Attenzione", "Seleziona un punto sulla mappa per creare una segnalazione.");
@@ -333,6 +341,7 @@ export default function MapScreen() {
         initialRegion={DEFAULT_REGION} 
         onPress={handleMapPress}
       >
+        {/* PERCORSO */}
         {routeCoordinates.length > 0 && (
             <Polyline 
               coordinates={routeCoordinates} 
@@ -341,23 +350,59 @@ export default function MapScreen() {
               lineDashPattern={[1]} 
             />
         )}
+        
+        {/* DESTINAZIONE */}
         {destination && <Marker coordinate={destination} title="Arrivo" pinColor="red" />}
         
+        {/* MARKER SEGNALAZIONI */}
         {reports.map((report) => (
           <Marker
             key={report.id}
             coordinate={{ latitude: report.latitude, longitude: report.longitude }}
+            zIndex={report.id} // Assicura che stia sopra la linea
+            calloutAnchor={{ x: 0.5, y: -0.1 }} // Posiziona il fumetto sopra
             title={!report.isMyReport ? TYPE_LABELS[report.type] : undefined}
             description={!report.isMyReport ? report.note : undefined}
             onPress={() => {
-              if (report.isMyReport) {
-                Alert.alert("Gestione", "Eliminare segnalazione?", [
-                    { text: "Elimina", style: "destructive", onPress: () => setReports(p => p.filter(r => r.id !== report.id)) },
-                    { text: "Annulla", style: "cancel" }
-                ]);
-              }
-            }}
+                  if (report.isMyReport) {
+                const noteText = report.note && report.note.trim() !== "" 
+                    ? `Nota: "${report.note}"` 
+                    : "Nessuna nota aggiuntiva.";
+
+                Alert.alert(
+                  `Tipo segnalazione: ${TYPE_LABELS[report.type]}`,
+                  `${noteText}\n\nCosa vuoi fare?`,
+                  [
+                    { 
+                      text: "Elimina", 
+                      style: "destructive",
+                      onPress: () => {
+                        Alert.alert(
+                          "Sei sicuro?",
+                          "L'eliminazione è definitiva e non può essere annullata.",
+                          [
+                            { 
+                              text: "Elimina definitivamente", 
+                              style: "destructive", 
+                              onPress: () => {
+                                setReports((prev) => prev.filter((r) => r.id !== report.id));
+                              }
+                            },
+                            { text: "Annulla", style: "cancel" }
+                          ]
+                        );
+                      }
+                    },
+                    { 
+                      text: "Chiudi", 
+                      style: "cancel"
+                    } 
+                  ]
+                );
+              }}
+            }
           >
+            {/* ICONA PERSONALIZZATA */}
             <View style={[styles.markerBg, { backgroundColor: TYPE_COLORS[report.type] }]}>
               <MaterialCommunityIcons name={TYPE_ICONS[report.type]} size={20} color="white" />
               {report.isMyReport && (
@@ -366,9 +411,68 @@ export default function MapScreen() {
                 </View>
               )}
             </View>
+
+            {/* CALLOUT (Fumetto) */}
+            <Callout 
+                tooltip={true} 
+                onPress={() => {
+                  if (report.isMyReport) {
+                const noteText = report.note && report.note.trim() !== "" 
+                    ? `Nota: "${report.note}"` 
+                    : "Nessuna nota aggiuntiva.";
+
+                Alert.alert(
+                  `Tipo segnalazione: ${TYPE_LABELS[report.type]}`,
+                  `${noteText}\n\nCosa vuoi fare?`,
+                  [
+                    { 
+                      text: "Elimina", 
+                      style: "destructive",
+                      onPress: () => {
+                        Alert.alert(
+                          "Sei sicuro?",
+                          "L'eliminazione è definitiva e non può essere annullata.",
+                          [
+                            { 
+                              text: "Elimina definitivamente", 
+                              style: "destructive", 
+                              onPress: () => {
+                                setReports((prev) => prev.filter((r) => r.id !== report.id));
+                              }
+                            },
+                            { text: "Annulla", style: "cancel" }
+                          ]
+                        );
+                      }
+                    },
+                    { 
+                      text: "Chiudi", 
+                      style: "cancel"
+                    } 
+                  ]
+                );
+              }
+            }}
+          >
+                <View style={styles.calloutContainer}>
+                    <Text style={styles.calloutTitle}>{TYPE_LABELS[report.type]}</Text>
+                    
+                    <Text style={styles.calloutNote}>
+                      {report.note ? report.note : "Nessuna descrizione"}
+                    </Text>
+
+                    {report.isMyReport && (
+                        <View style={styles.calloutFooter}>
+                            <MaterialCommunityIcons name="trash-can-outline" size={14} color="#e74c3c" />
+                            <Text style={styles.calloutDeleteText}> Tocca per eliminare</Text>
+                        </View>
+                    )}
+                </View>
+            </Callout>
           </Marker>
         ))}
 
+        {/* PUNTO SELEZIONATO (TAP MANUALE) */}
         {selectedPoint && (
           <Marker coordinate={selectedPoint} title="Punto Selezionato" pinColor="blue" opacity={0.7}
             onPress={(e) => { e.stopPropagation(); setSelectedPoint(null); }}
@@ -376,7 +480,9 @@ export default function MapScreen() {
              <Callout tooltip>
                 <View style={styles.calloutContainer}>
                     <Text style={styles.calloutTitle}>Nuova posizione</Text>
-                    <Text style={styles.calloutDesc}>(Tocca per rimuovere)</Text>
+                    <Text style={[styles.calloutNote, {fontStyle: 'italic', color: '#666'}]}>
+                        (Tocca il marker per rimuovere)
+                    </Text>
                 </View>
              </Callout>
           </Marker>
@@ -389,6 +495,7 @@ export default function MapScreen() {
         <View style={styles.loaderContainer}><ActivityIndicator size="large" color="#6c5ce7" /></View>
       )}
       
+      {/* SCHEDA INFO NAVIGAZIONE */}
       {routeInfo && (
           <View style={styles.infoCard}>
               <View style={styles.infoTextContainer}>
@@ -408,14 +515,22 @@ export default function MapScreen() {
           </View>
       )}
 
+      {/* TASTO GPS */}
       <TouchableOpacity 
-        style={[styles.myLocationButton, routeInfo ? { bottom: 170 } : { bottom: 110 }]} 
+        style={[
+            styles.myLocationButton, 
+            routeInfo ? { bottom: 220 } : { bottom: 100 }
+        ]} 
         onPress={handleCenterOnUser}
       >
         <MaterialCommunityIcons name="crosshairs-gps" size={28} color="#333" />
       </TouchableOpacity>
 
-      {!destination && <FloatingReportButton onPress={handleFloatingButtonPress} />}
+      {/* TASTO REPORT */}
+      <FloatingReportButton 
+          onPress={handleFloatingButtonPress} 
+          style={ routeInfo ? { bottom: 140 } : undefined }
+      />
 
       <ReportModal
         visible={modalVisible}
@@ -430,6 +545,8 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { width: "100%", height: "100%" },
+  
+  // Stili Marker
   markerBg: {
     padding: 6,
     borderRadius: 20,
@@ -440,7 +557,64 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     justifyContent: 'center',
     alignItems: 'center',
+    // IMPORTANTE per Android: definire dimensioni minime se l'icona non risponde
+    minWidth: 36,
+    minHeight: 36,
+    backgroundColor: 'white' 
   },
+  myReportBadge: {
+    position: 'absolute', bottom: -5, right: -5, backgroundColor: '#2ecc71',
+    borderRadius: 8, width: 16, height: 16, justifyContent: 'center',
+    alignItems: 'center', borderWidth: 1, borderColor: 'white'
+  },
+
+  // Stili Callout (Fumetto)
+  calloutContainer: {
+    backgroundColor: "white",
+    padding: 12,
+    borderRadius: 12,
+    width: 200, 
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+    marginBottom: 5 
+  },
+  calloutTitle: {
+    fontWeight: "bold",
+    fontSize: 15,
+    marginBottom: 4,
+    color: "#333",
+    textAlign: 'center'
+  },
+  calloutNote: {
+    fontSize: 13,
+    color: "#555",
+    marginBottom: 8,
+    textAlign: 'center'
+  },
+  calloutFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+    paddingTop: 5,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    width: '100%',
+    justifyContent: 'center'
+  },
+  calloutDeleteText: {
+    fontSize: 11,
+    color: "#e74c3c", 
+    fontWeight: "600",
+  },
+
+  // Stili UI Navigazione
   loaderContainer: {
     position: "absolute",
     top: 120,
@@ -481,17 +655,4 @@ const styles = StyleSheet.create({
   divider: { width: 1, height: '80%', backgroundColor: '#dfe6e9', marginHorizontal: 15 },
   closeBtn: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
   closeBtnText: { color: '#e74c3c', fontSize: 14, fontWeight: '600', marginTop: 4 },
-  myReportBadge: {
-    position: 'absolute', bottom: -5, right: -5, backgroundColor: '#2ecc71',
-    borderRadius: 8, width: 16, height: 16, justifyContent: 'center',
-    alignItems: 'center', borderWidth: 1, borderColor: 'white'
-  },
-  calloutContainer: {
-    backgroundColor: "white", padding: 10, borderRadius: 8, width: 160,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#eee',
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1,
-    shadowRadius: 4, elevation: 2
-  },
-  calloutTitle: { fontWeight: "bold", fontSize: 14, marginBottom: 4, color: "#333", textAlign: 'center' },
-  calloutDesc: { fontSize: 12, color: "#e74c3c", fontStyle: 'italic', textAlign: 'center' },
 });
