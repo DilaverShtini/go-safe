@@ -1,5 +1,3 @@
-// src/data/chatData.ts
-
 export interface ChatItem {
   id: string;
   user: string;

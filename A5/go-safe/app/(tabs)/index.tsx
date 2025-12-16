@@ -77,14 +77,12 @@ export default function MapScreen() {
   useEffect(() => {
     (async () => {
       try {
-        // Controllo servizi attivi
         const servicesEnabled = await Location.hasServicesEnabledAsync();
         if (!servicesEnabled) {
           Alert.alert("GPS Disattivato", "Attiva la geolocalizzazione per usare la mappa.", [{ text: "OK" }]);
           return;
         }
 
-        // Controllo permessi
         let { status } = await Location.getForegroundPermissionsAsync();
         if (status !== 'granted') {
            const request = await Location.requestForegroundPermissionsAsync();
@@ -99,7 +97,6 @@ export default function MapScreen() {
           return;
         }
 
-        // Ottieni posizione
         let location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         setUserLocation(location.coords);
         
@@ -359,48 +356,8 @@ export default function MapScreen() {
           <Marker
             key={report.id}
             coordinate={{ latitude: report.latitude, longitude: report.longitude }}
-            zIndex={report.id} // Assicura che stia sopra la linea
-            calloutAnchor={{ x: 0.5, y: -0.1 }} // Posiziona il fumetto sopra
-            title={!report.isMyReport ? TYPE_LABELS[report.type] : undefined}
-            description={!report.isMyReport ? report.note : undefined}
-            onPress={() => {
-                  if (report.isMyReport) {
-                const noteText = report.note && report.note.trim() !== "" 
-                    ? `Nota: "${report.note}"` 
-                    : "Nessuna nota aggiuntiva.";
-
-                Alert.alert(
-                  `Tipo segnalazione: ${TYPE_LABELS[report.type]}`,
-                  `${noteText}\n\nCosa vuoi fare?`,
-                  [
-                    { 
-                      text: "Elimina", 
-                      style: "destructive",
-                      onPress: () => {
-                        Alert.alert(
-                          "Sei sicuro?",
-                          "L'eliminazione è definitiva e non può essere annullata.",
-                          [
-                            { 
-                              text: "Elimina definitivamente", 
-                              style: "destructive", 
-                              onPress: () => {
-                                setReports((prev) => prev.filter((r) => r.id !== report.id));
-                              }
-                            },
-                            { text: "Annulla", style: "cancel" }
-                          ]
-                        );
-                      }
-                    },
-                    { 
-                      text: "Chiudi", 
-                      style: "cancel"
-                    } 
-                  ]
-                );
-              }}
-            }
+            zIndex={report.id} 
+            calloutAnchor={{ x: 0.5, y: -0.1 }} 
           >
             {/* ICONA PERSONALIZZATA */}
             <View style={[styles.markerBg, { backgroundColor: TYPE_COLORS[report.type] }]}>
@@ -417,43 +374,17 @@ export default function MapScreen() {
                 tooltip={true} 
                 onPress={() => {
                   if (report.isMyReport) {
-                const noteText = report.note && report.note.trim() !== "" 
-                    ? `Nota: "${report.note}"` 
-                    : "Nessuna nota aggiuntiva.";
-
-                Alert.alert(
-                  `Tipo segnalazione: ${TYPE_LABELS[report.type]}`,
-                  `${noteText}\n\nCosa vuoi fare?`,
-                  [
-                    { 
-                      text: "Elimina", 
-                      style: "destructive",
-                      onPress: () => {
-                        Alert.alert(
-                          "Sei sicuro?",
-                          "L'eliminazione è definitiva e non può essere annullata.",
-                          [
-                            { 
-                              text: "Elimina definitivamente", 
-                              style: "destructive", 
-                              onPress: () => {
-                                setReports((prev) => prev.filter((r) => r.id !== report.id));
-                              }
-                            },
-                            { text: "Annulla", style: "cancel" }
-                          ]
-                        );
-                      }
-                    },
-                    { 
-                      text: "Chiudi", 
-                      style: "cancel"
-                    } 
-                  ]
-                );
-              }
-            }}
-          >
+                    Alert.alert("Gestione", "Eliminare questa segnalazione?", [
+                        { text: "Annulla", style: "cancel" },
+                        { 
+                          text: "Elimina", 
+                          style: "destructive", 
+                          onPress: () => setReports(p => p.filter(r => r.id !== report.id)) 
+                        },
+                    ]);
+                  }
+                }}
+            >
                 <View style={styles.calloutContainer}>
                     <Text style={styles.calloutTitle}>{TYPE_LABELS[report.type]}</Text>
                     
@@ -474,7 +405,11 @@ export default function MapScreen() {
 
         {/* PUNTO SELEZIONATO (TAP MANUALE) */}
         {selectedPoint && (
-          <Marker coordinate={selectedPoint} title="Punto Selezionato" pinColor="blue" opacity={0.7}
+          <Marker 
+            coordinate={selectedPoint} 
+            title="Punto Selezionato" 
+            pinColor="red"
+            opacity={1.0}
             onPress={(e) => { e.stopPropagation(); setSelectedPoint(null); }}
           >
              <Callout tooltip>
@@ -515,21 +450,21 @@ export default function MapScreen() {
           </View>
       )}
 
-      {/* TASTO GPS */}
+      {/* TASTO GPS: Si alza di più (280) durante la navigazione */}
       <TouchableOpacity 
         style={[
             styles.myLocationButton, 
-            routeInfo ? { bottom: 220 } : { bottom: 100 }
+            routeInfo ? { bottom: 220 } : { bottom: 110 } 
         ]} 
         onPress={handleCenterOnUser}
       >
         <MaterialCommunityIcons name="crosshairs-gps" size={28} color="#333" />
       </TouchableOpacity>
 
-      {/* TASTO REPORT */}
+      {/* TASTO REPORT: Si alza di più (200) durante la navigazione */}
       <FloatingReportButton 
           onPress={handleFloatingButtonPress} 
-          style={ routeInfo ? { bottom: 140 } : undefined }
+          style={ routeInfo ? { bottom: 150 } : undefined }
       />
 
       <ReportModal
@@ -546,7 +481,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { width: "100%", height: "100%" },
   
-  // Stili Marker
   markerBg: {
     padding: 6,
     borderRadius: 20,
@@ -557,7 +491,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     justifyContent: 'center',
     alignItems: 'center',
-    // IMPORTANTE per Android: definire dimensioni minime se l'icona non risponde
     minWidth: 36,
     minHeight: 36,
     backgroundColor: 'white' 
@@ -568,7 +501,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', borderWidth: 1, borderColor: 'white'
   },
 
-  // Stili Callout (Fumetto)
   calloutContainer: {
     backgroundColor: "white",
     padding: 12,
@@ -614,7 +546,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // Stili UI Navigazione
   loaderContainer: {
     position: "absolute",
     top: 120,
