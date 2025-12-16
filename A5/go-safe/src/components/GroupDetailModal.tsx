@@ -109,13 +109,8 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin, onLe
       });
   };
 
-  // NUOVA FUNZIONE: Gestisce l'aggiornamento dell'utente (richiesto dal modale profilo)
   const handleUpdateUser = (updatedUser: UserProfile) => {
-      // Aggiorniamo l'utente selezionato così l'UI del modale riflette le modifiche (es. tasto "Collegato")
       setSelectedUser(updatedUser);
-      
-      // Qui potresti anche aggiornare la lista globale dei partecipanti se usassi uno stato per 'participantsList'
-      // console.log("Utente aggiornato:", updatedUser.name);
   };
 
   if (!group) return null;
@@ -240,7 +235,6 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin, onLe
 
           </ScrollView>
 
-          {/* QUI PASSIAMO LA PROP MANCANTE */}
           <UserProfileModal 
             visible={isProfileVisible}
             user={selectedUser}

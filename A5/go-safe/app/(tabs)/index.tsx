@@ -73,7 +73,6 @@ export default function MapScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [lastReportId, setLastReportId] = useState<number | null>(null);
 
-  // --- 1. GESTIONE PERMESSI E POSIZIONE ---
   useEffect(() => {
     (async () => {
       try {
@@ -131,7 +130,6 @@ export default function MapScreen() {
     }
   };
 
-  // --- 2. LOGICA NAVIGAZIONE ---
   const getDistanceScore = (pt1: {latitude: number, longitude: number}, pt2: {latitude: number, longitude: number}) => {
     return Math.sqrt(Math.pow(pt1.latitude - pt2.latitude, 2) + Math.pow(pt1.longitude - pt2.longitude, 2));
   };
@@ -279,7 +277,6 @@ export default function MapScreen() {
     setSelectedPoint(e.nativeEvent.coordinate);
   };
 
-  // --- 3. GESTIONE SEGNALAZIONI ---
   const handleFloatingButtonPress = () => {
     if (!selectedPoint) {
       Alert.alert("Attenzione", "Seleziona un punto sulla mappa per creare una segnalazione.");
@@ -369,7 +366,7 @@ export default function MapScreen() {
               )}
             </View>
 
-            {/* CALLOUT (Fumetto) */}
+            {/* CALLOUT */}
             <Callout 
                 tooltip={true} 
                 onPress={() => {
@@ -403,7 +400,7 @@ export default function MapScreen() {
           </Marker>
         ))}
 
-        {/* PUNTO SELEZIONATO (TAP MANUALE) */}
+        {/* PUNTO SELEZIONATO */}
         {selectedPoint && (
           <Marker 
             coordinate={selectedPoint} 
@@ -450,7 +447,7 @@ export default function MapScreen() {
           </View>
       )}
 
-      {/* TASTO GPS: Si alza di più (280) durante la navigazione */}
+      {/* TASTO GPS */}
       <TouchableOpacity 
         style={[
             styles.myLocationButton, 
@@ -461,7 +458,7 @@ export default function MapScreen() {
         <MaterialCommunityIcons name="crosshairs-gps" size={28} color="#333" />
       </TouchableOpacity>
 
-      {/* TASTO REPORT: Si alza di più (200) durante la navigazione */}
+      {/* TASTO REPORT */}
       <FloatingReportButton 
           onPress={handleFloatingButtonPress} 
           style={ routeInfo ? { bottom: 150 } : undefined }

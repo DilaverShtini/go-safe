@@ -32,7 +32,6 @@ export interface UserProfile {
   trips: number;
   rating: number; 
   reviews: Review[];
-  // Aggiungiamo questo campo opzionale per gestire lo stato di connessione
   amIConnected?: boolean; 
 }
 
@@ -40,20 +39,17 @@ interface UserProfileModalProps {
   visible: boolean;
   user: UserProfile | null;
   onClose: () => void;
-  // FONDAMENTALE: Questa funzione serve ad aggiornare i dati nel componente padre
   onUpdateUser: (updatedUser: UserProfile) => void;
 }
 
 export default function UserProfileModal({ visible, user, onClose, onUpdateUser }: UserProfileModalProps) {
   const [displayUser, setDisplayUser] = useState<UserProfile | null>(null);
   
-  // Stati per il form recensione
   const [isWritingReview, setIsWritingReview] = useState(false);
   const [newReviewText, setNewReviewText] = useState("");
   const [newRating, setNewRating] = useState(0);
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
 
-  // Sincronizza lo stato locale quando cambia l'utente passato dal padre
   useEffect(() => {
     if (user) {
       setDisplayUser(user);
@@ -76,12 +72,10 @@ export default function UserProfileModal({ visible, user, onClose, onUpdateUser 
     return parseFloat(avg.toFixed(1));
   };
 
-  // --- GESTIONE CONNESSIONE ---
   const toggleConnection = () => {
       if (!displayUser) return;
 
       const newConnectionState = !displayUser.amIConnected;
-      // Aggiorniamo anche il numero (cosmetico)
       const newConnectionCount = newConnectionState 
             ? displayUser.connections + 1 
             : displayUser.connections - 1;
@@ -92,13 +86,11 @@ export default function UserProfileModal({ visible, user, onClose, onUpdateUser 
           connections: newConnectionCount
       };
 
-      // Aggiorna locale
       setDisplayUser(updatedUser);
-      // Aggiorna padre (Persistenza in memoria)
+
       onUpdateUser(updatedUser);
   };
 
-  // --- INVIO RECENSIONE ---
   const handleSendReview = () => {
     if (newReviewText.trim() === "") {
         Alert.alert("Attenzione", "Scrivi un commento per la recensione.");
@@ -114,14 +106,12 @@ export default function UserProfileModal({ visible, user, onClose, onUpdateUser 
     let updatedReviews: Review[];
 
     if (editingReviewId) {
-        // Modifica esistente
         updatedReviews = displayUser.reviews.map(r => 
             r.id === editingReviewId 
             ? { ...r, text: newReviewText, rating: newRating } 
             : r
         );
     } else {
-        // Nuova recensione
         const newReview: Review = {
             id: Date.now().toString(),
             title: "La tua Recensione",
@@ -141,15 +131,12 @@ export default function UserProfileModal({ visible, user, onClose, onUpdateUser 
         rating: newAverage
     };
 
-    // Aggiorna locale
     setDisplayUser(updatedUser);
-    // Aggiorna padre (Persistenza in memoria)
     onUpdateUser(updatedUser);
 
     resetForm();
   };
 
-  // --- PREPARA MODIFICA ---
   const handleEditReview = (review: Review) => {
       setNewReviewText(review.text);
       setNewRating(review.rating);
@@ -157,7 +144,6 @@ export default function UserProfileModal({ visible, user, onClose, onUpdateUser 
       setIsWritingReview(true);
   };
 
-  // --- ELIMINA RECENSIONE ---
   const handleDeleteReview = (reviewId: string) => {
       Alert.alert(
           "Elimina Recensione",
@@ -179,7 +165,7 @@ export default function UserProfileModal({ visible, user, onClose, onUpdateUser 
                       };
 
                       setDisplayUser(updatedUser);
-                      onUpdateUser(updatedUser); // Aggiorna padre
+                      onUpdateUser(updatedUser);
 
                       if (editingReviewId === reviewId) resetForm();
                   }
@@ -193,7 +179,6 @@ export default function UserProfileModal({ visible, user, onClose, onUpdateUser 
 
   const isOwnProfile = displayUser.id === 'me';
 
-  // Helper Stelle Statiche
   const renderStaticStars = (count: number, size: number = 20, color: string = "#333") => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -209,7 +194,6 @@ export default function UserProfileModal({ visible, user, onClose, onUpdateUser 
     return <View style={{ flexDirection: 'row' }}>{stars}</View>;
   };
 
-  // Helper Stelle Interattive
   const renderInteractiveStars = () => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {

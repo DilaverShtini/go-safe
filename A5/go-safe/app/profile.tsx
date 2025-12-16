@@ -285,7 +285,6 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
   },
   
-  // Immagine
   imageContainer: {
     alignItems: "center",
     marginBottom: 25,
