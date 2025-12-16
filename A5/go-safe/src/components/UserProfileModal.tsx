@@ -10,9 +10,10 @@ import {
   TextInput,
   Alert
 } from "react-native";
-import { MaterialCommunityIcons, Feather, FontAwesome, Ionicons } from "@expo/vector-icons";
+import { MaterialCommunityIcons, Feather, FontAwesome } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+// Interfacce Dati
 export interface Review {
   id: string;
   title: string;
@@ -31,32 +32,34 @@ export interface UserProfile {
   trips: number;
   rating: number; 
   reviews: Review[];
+  // Aggiungiamo questo campo opzionale per gestire lo stato di connessione
+  amIConnected?: boolean; 
 }
 
 interface UserProfileModalProps {
   visible: boolean;
   user: UserProfile | null;
   onClose: () => void;
+  // FONDAMENTALE: Questa funzione serve ad aggiornare i dati nel componente padre
+  onUpdateUser: (updatedUser: UserProfile) => void;
 }
 
-export default function UserProfileModal({ visible, user, onClose }: UserProfileModalProps) {
+export default function UserProfileModal({ visible, user, onClose, onUpdateUser }: UserProfileModalProps) {
   const [displayUser, setDisplayUser] = useState<UserProfile | null>(null);
   
-  const [isConnected, setIsConnected] = useState(false);
-
+  // Stati per il form recensione
   const [isWritingReview, setIsWritingReview] = useState(false);
   const [newReviewText, setNewReviewText] = useState("");
   const [newRating, setNewRating] = useState(0);
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
 
+  // Sincronizza lo stato locale quando cambia l'utente passato dal padre
   useEffect(() => {
     if (user) {
-      const initialAvg = calculateAverageRating(user.reviews);
-      setDisplayUser({ ...user, rating: initialAvg });
-      setIsConnected(false);
+      setDisplayUser(user);
       resetForm();
     }
-  }, [user, visible]);
+  }, [user]);
 
   const resetForm = () => {
     setIsWritingReview(false);
@@ -65,10 +68,7 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
     setEditingReviewId(null);
   };
 
-  const toggleConnection = () => {
-      setIsConnected(!isConnected);
-  };
-
+  // Calcolo media voti
   const calculateAverageRating = (reviews: Review[]) => {
     if (!reviews || reviews.length === 0) return 0;
     const total = reviews.reduce((sum, review) => sum + review.rating, 0);
@@ -76,10 +76,124 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
     return parseFloat(avg.toFixed(1));
   };
 
+  // --- GESTIONE CONNESSIONE ---
+  const toggleConnection = () => {
+      if (!displayUser) return;
+
+      const newConnectionState = !displayUser.amIConnected;
+      // Aggiorniamo anche il numero (cosmetico)
+      const newConnectionCount = newConnectionState 
+            ? displayUser.connections + 1 
+            : displayUser.connections - 1;
+
+      const updatedUser = {
+          ...displayUser,
+          amIConnected: newConnectionState,
+          connections: newConnectionCount
+      };
+
+      // Aggiorna locale
+      setDisplayUser(updatedUser);
+      // Aggiorna padre (Persistenza in memoria)
+      onUpdateUser(updatedUser);
+  };
+
+  // --- INVIO RECENSIONE ---
+  const handleSendReview = () => {
+    if (newReviewText.trim() === "") {
+        Alert.alert("Attenzione", "Scrivi un commento per la recensione.");
+        return;
+    }
+    if (newRating === 0) {
+        Alert.alert("Attenzione", "Seleziona un numero di stelle.");
+        return;
+    }
+
+    if (!displayUser) return;
+
+    let updatedReviews: Review[];
+
+    if (editingReviewId) {
+        // Modifica esistente
+        updatedReviews = displayUser.reviews.map(r => 
+            r.id === editingReviewId 
+            ? { ...r, text: newReviewText, rating: newRating } 
+            : r
+        );
+    } else {
+        // Nuova recensione
+        const newReview: Review = {
+            id: Date.now().toString(),
+            title: "La tua Recensione",
+            tags: "@Tu",
+            text: newReviewText,
+            rating: newRating,
+            isMyReview: true, 
+        };
+        updatedReviews = [newReview, ...displayUser.reviews];
+    }
+
+    const newAverage = calculateAverageRating(updatedReviews);
+
+    const updatedUser = {
+        ...displayUser,
+        reviews: updatedReviews,
+        rating: newAverage
+    };
+
+    // Aggiorna locale
+    setDisplayUser(updatedUser);
+    // Aggiorna padre (Persistenza in memoria)
+    onUpdateUser(updatedUser);
+
+    resetForm();
+  };
+
+  // --- PREPARA MODIFICA ---
+  const handleEditReview = (review: Review) => {
+      setNewReviewText(review.text);
+      setNewRating(review.rating);
+      setEditingReviewId(review.id);
+      setIsWritingReview(true);
+  };
+
+  // --- ELIMINA RECENSIONE ---
+  const handleDeleteReview = (reviewId: string) => {
+      Alert.alert(
+          "Elimina Recensione",
+          "Sei sicuro di voler eliminare definitivamente questa recensione?",
+          [
+              { 
+                  text: "Elimina", 
+                  style: "destructive",
+                  onPress: () => {
+                      if (!displayUser) return;
+
+                      const updatedReviews = displayUser.reviews.filter(r => r.id !== reviewId);
+                      const newAverage = calculateAverageRating(updatedReviews);
+                      
+                      const updatedUser = {
+                          ...displayUser,
+                          reviews: updatedReviews,
+                          rating: newAverage
+                      };
+
+                      setDisplayUser(updatedUser);
+                      onUpdateUser(updatedUser); // Aggiorna padre
+
+                      if (editingReviewId === reviewId) resetForm();
+                  }
+              },
+              { text: "Annulla", style: "cancel" }
+          ]
+      );
+  };
+
   if (!displayUser) return null;
 
   const isOwnProfile = displayUser.id === 'me';
 
+  // Helper Stelle Statiche
   const renderStaticStars = (count: number, size: number = 20, color: string = "#333") => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -95,6 +209,7 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
     return <View style={{ flexDirection: 'row' }}>{stars}</View>;
   };
 
+  // Helper Stelle Interattive
   const renderInteractiveStars = () => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -110,85 +225,6 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
       );
     }
     return <View style={{ flexDirection: 'row', marginBottom: 10 }}>{stars}</View>;
-  };
-
-  const handleSendReview = () => {
-    if (newReviewText.trim() === "") {
-        Alert.alert("Attenzione", "Scrivi un commento per la recensione.");
-        return;
-    }
-    if (newRating === 0) {
-        Alert.alert("Attenzione", "Seleziona un numero di stelle.");
-        return;
-    }
-
-    setDisplayUser(prev => {
-        if (!prev) return null;
-
-        let updatedReviews: Review[];
-
-        if (editingReviewId) {
-            updatedReviews = prev.reviews.map(r => 
-                r.id === editingReviewId 
-                ? { ...r, text: newReviewText, rating: newRating } 
-                : r
-            );
-        } else {
-            const newReview: Review = {
-                id: Date.now().toString(),
-                title: "La tua Recensione",
-                tags: "@Tu",
-                text: newReviewText,
-                rating: newRating,
-                isMyReview: true, 
-            };
-            updatedReviews = [newReview, ...prev.reviews];
-        }
-
-        const newAverage = calculateAverageRating(updatedReviews);
-
-        return {
-            ...prev,
-            reviews: updatedReviews,
-            rating: newAverage
-        };
-    });
-
-    resetForm();
-  };
-
-  const handleEditReview = (review: Review) => {
-      setNewReviewText(review.text);
-      setNewRating(review.rating);
-      setEditingReviewId(review.id);
-      setIsWritingReview(true);
-  };
-
-  const handleDeleteReview = (reviewId: string) => {
-      Alert.alert(
-          "Elimina Recensione",
-          "Sei sicuro di voler eliminare definitivamente questa recensione?",
-          [
-              { 
-                  text: "Elimina", 
-                  style: "destructive",
-                  onPress: () => {
-                      setDisplayUser(prev => {
-                          if (!prev) return null;
-                          const updatedReviews = prev.reviews.filter(r => r.id !== reviewId);
-                          const newAverage = calculateAverageRating(updatedReviews);
-                          return {
-                              ...prev,
-                              reviews: updatedReviews,
-                              rating: newAverage
-                          };
-                      });
-                      if (editingReviewId === reviewId) resetForm();
-                  }
-              },
-              { text: "Annulla", style: "cancel" }
-          ]
-      );
   };
 
   return (
@@ -222,7 +258,7 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
                 <View style={styles.statsContainer}>
                     <View style={styles.statItem}>
                        <Text style={styles.statLabel}>Collegamenti</Text>
-                       <Text style={styles.statValue}>{displayUser.connections + (isConnected ? 1 : 0)}</Text>
+                       <Text style={styles.statValue}>{displayUser.connections}</Text>
                     </View>
                     <View style={styles.dividerVertical} />
                     <View style={styles.statItem}>
@@ -233,11 +269,11 @@ export default function UserProfileModal({ visible, user, onClose }: UserProfile
 
                 {!isOwnProfile && (
                     <TouchableOpacity 
-                        style={[styles.connectButton, isConnected && styles.connectButtonActive]}
+                        style={[styles.connectButton, displayUser.amIConnected && styles.connectButtonActive]}
                         onPress={toggleConnection}
                         activeOpacity={0.7}
                     >
-                        {isConnected ? (
+                        {displayUser.amIConnected ? (
                             <>
                                 <Feather name="user-check" size={18} color="#6C5CE7" style={{marginRight: 6}} />
                                 <Text style={styles.connectButtonTextActive}>Collegato</Text>
