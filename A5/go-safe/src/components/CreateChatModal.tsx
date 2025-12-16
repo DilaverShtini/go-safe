@@ -11,7 +11,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 
-// Dati finti dei contatti disponibili per una nuova chat
 const MOCK_CONTACTS = [
   { id: 'u1', name: 'Luigi Verdi' },
   { id: 'u2', name: 'Giulia Neri' },
