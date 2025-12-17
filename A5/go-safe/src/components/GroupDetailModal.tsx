@@ -47,32 +47,63 @@ const CURRENT_USER_PROFILE: UserProfile = {
     reviews: []
 };
 
-const MOCK_PARTICIPANTS: UserProfile[] = [
-    {
-        id: "u1",
-        name: "Luigi Verdi",
-        avatarUrl: "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg",
-        isVerified: true,
-        connections: 7,
-        trips: 3,
-        rating: 4.5,
-        reviews: [ { id: "r1", title: "Viaggio piacevole", tags: "@Mario", text: "Compagnia ottima.", rating: 5 } ]
-    },
-    {
-        id: "u2",
-        name: "Giulia Neri",
-        avatarUrl: "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671122.jpg",
-        isVerified: false,
-        connections: 2,
-        trips: 1,
-        rating: 4,
-        reviews: []
-    }
-];
+
+const INITIAL_DB = {
+    groupA: [
+        {
+            id: "u1",
+            name: "Luigi Verdi",
+            avatarUrl: "https://img.freepik.com/free-psd/3d-illustration-human-avatar-profile_23-2150671142.jpg",
+            isVerified: true,
+            connections: 7,
+            trips: 3,
+            rating: 5.0,
+            reviews: [
+                { id: "r1", title: "Viaggio Top!", tags: "@Mario", text: "Luigi è simpaticissimo. Consigliato!", rating: 5 }
+            ]
+        },
+        {
+            id: "u2",
+            name: "Giulia Neri",
+            avatarUrl: "https://img.freepik.com/free-psd/3d-illustration-person-with-pink-hair_23-2149436186.jpg",
+            isVerified: false,
+            connections: 2,
+            trips: 1,
+            rating: 0.0,
+            reviews: []
+        }
+    ],
+    groupB: [
+        {
+            id: "u3",
+            name: "Marco Bianchi",
+            avatarUrl: "https://img.freepik.com/free-psd/3d-illustration-person-with-glasses_23-2149436190.jpg",
+            isVerified: true,
+            connections: 15,
+            trips: 8,
+            rating: 5.0,
+            reviews: [
+                { id: "r4", title: "Organizzatore perfetto", tags: "@Giuseppe", text: "Tutto nei minimi dettagli.", rating: 5 }
+            ]
+        },
+        {
+            id: "u4",
+            name: "Anna Rosa",
+            avatarUrl: "https://img.freepik.com/free-psd/3d-illustration-person-with-pink-hair_23-2149436186.jpg",
+            isVerified: true,
+            connections: 5,
+            trips: 2,
+            rating: 0.0,
+            reviews: []
+        }
+    ]
+};
 
 export default function GroupDetailModal({ visible, group, onClose, onJoin, onLeave, isLoading = false }: GroupDetailModalProps) {
   const router = useRouter(); 
   
+  const [participantsData, setParticipantsData] = useState(INITIAL_DB);
+
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isProfileVisible, setProfileVisible] = useState(false);
 
@@ -100,7 +131,6 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin, onLe
       setProfileVisible(true);
   };
 
-  // Funzione per navigare alla chat
   const handleOpenChat = (participant: UserProfile) => {
       onClose(); 
       router.push({
@@ -108,16 +138,30 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin, onLe
           params: { id: participant.id, user: participant.name }
       });
   };
-
   const handleUpdateUser = (updatedUser: UserProfile) => {
       setSelectedUser(updatedUser);
+
+      setParticipantsData((prevData) => {
+          const groupKey = (group?.id === '2') ? 'groupB' : 'groupA';
+          
+          const updatedList = prevData[groupKey].map(u => 
+              u.id === updatedUser.id ? updatedUser : u
+          );
+
+          return {
+              ...prevData,
+              [groupKey]: updatedList
+          };
+      });
   };
 
   if (!group) return null;
 
+  const currentParticipants = (group.id === '2') ? participantsData.groupB : participantsData.groupA;
+
   const participantsList = group.isJoined 
-      ? [CURRENT_USER_PROFILE, ...MOCK_PARTICIPANTS] 
-      : MOCK_PARTICIPANTS;
+      ? [CURRENT_USER_PROFILE, ...currentParticipants] 
+      : currentParticipants;
 
   return (
     <Modal animationType="slide" visible={visible} onRequestClose={onClose}>
@@ -149,6 +193,9 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin, onLe
                               <Text style={{fontSize: 12, color: '#6C5CE7', fontWeight: '500'}}>
                                   {group.isOrganizer ? "Organizzatore" : "Partecipante"}
                               </Text>
+                          )}
+                          { !isMe && (
+                              <Text style={{fontSize: 10, color: 'green'}}>Connesso</Text>
                           )}
                       </View>
                       

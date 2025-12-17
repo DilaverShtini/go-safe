@@ -30,10 +30,10 @@ interface GroupItem {
 const INITIAL_GROUPS: GroupItem[] = [
   { 
       id: "1", 
-      name: "Destinazione 1", 
-      startZone: "Milano Centrale", 
-      startTime: "20:30", 
-      date: "12/05/2025", 
+      name: "Stazione Cesena", 
+      startZone: "Piazza della Libertà", 
+      startTime: "21:30", 
+      date: "17/12/2025", 
       initial: "A", 
       color: "#E1BEE7", 
       isJoined: false,
@@ -41,10 +41,10 @@ const INITIAL_GROUPS: GroupItem[] = [
   },
   { 
       id: "2", 
-      name: "Destinazione 2", 
+      name: "Stazione cesena", 
       startZone: "Piazza del Popolo", 
-      startTime: "23:00", 
-      date: "15/06/2025", 
+      startTime: "21:45", 
+      date: "17/12/2025", 
       initial: "B", 
       color: "#E1BEE7", 
       isJoined: false,
