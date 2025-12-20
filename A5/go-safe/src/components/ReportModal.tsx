@@ -11,6 +11,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Animated,
+  PanResponder,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -33,13 +34,42 @@ interface ReportModalProps {
 export default function ReportModal({ visible, onClose, onSubmit, onUndo }: ReportModalProps) {
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [note, setNote] = useState("");
-
   const [showSuccessToast, setShowSuccessToast] = useState(false);
-
   const timerRef = useRef<any>(null);
+  const panY = useRef(new Animated.Value(0)).current;
+
+  const resetPosition = () => {
+    Animated.spring(panY, {
+      toValue: 0,
+      useNativeDriver: true,
+      bounciness: 5,
+    }).start();
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return gestureState.dy > 5;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          panY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 100) {
+          onClose();
+        } else {
+          resetPosition();
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
-    if (!visible) {
+    if (visible) {
+      panY.setValue(0);
       setShowSuccessToast(false);
       setSelectedType(null);
       setNote("");
@@ -49,13 +79,10 @@ export default function ReportModal({ visible, onClose, onSubmit, onUndo }: Repo
   const handleSubmit = () => {
     if (selectedType) {
       onSubmit(selectedType, note);
-
       setShowSuccessToast(true);
-
       setSelectedType(null);
       setNote("");
       Keyboard.dismiss();
-
       timerRef.current = setTimeout(() => {
         setShowSuccessToast(false);
         onClose();
@@ -65,9 +92,7 @@ export default function ReportModal({ visible, onClose, onSubmit, onUndo }: Repo
 
   const handleUndoPress = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      
       if (onUndo) onUndo();
-
       setShowSuccessToast(false);
       onClose(); 
   };
@@ -81,7 +106,6 @@ export default function ReportModal({ visible, onClose, onSubmit, onUndo }: Repo
                     <MaterialCommunityIcons name="check-circle" size={24} color="#4CAF50" />
                     <Text style={styles.undoToastText}>Segnalazione inviata</Text>
                 </View>
-
                 {onUndo && (
                   <TouchableOpacity onPress={handleUndoPress} style={styles.undoButton}>
                       <Text style={styles.undoButtonText}>ANNULLA</Text>
@@ -108,9 +132,16 @@ export default function ReportModal({ visible, onClose, onSubmit, onUndo }: Repo
           <TouchableWithoutFeedback onPress={onClose}>
             <View style={{ flex: 1 }} />
           </TouchableWithoutFeedback>
-
-          <View style={styles.modalContent}>
-            <View style={styles.handle} />
+          <Animated.View 
+            style={[
+                styles.modalContent, 
+                { transform: [{ translateY: panY }] } 
+            ]}
+            {...panResponder.panHandlers}
+          >
+            <View style={styles.handleContainer}>
+                <View style={styles.handle} />
+            </View>
 
             <Text style={styles.title}>Nuova Segnalazione</Text>
             <Text style={styles.subtitle}>Cosa sta succedendo?</Text>
@@ -164,7 +195,7 @@ export default function ReportModal({ visible, onClose, onSubmit, onUndo }: Repo
                 <Text style={styles.submitText}>Invia</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
     </Modal>
@@ -189,13 +220,17 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 10,
   },
+  handleContainer: {
+      width: '100%',
+      alignItems: 'center',
+      paddingVertical: 10,
+      marginTop: -10,
+  },
   handle: {
-    width: 40,
-    height: 5,
-    backgroundColor: "#ccc",
+    width: 50,
+    height: 6,
+    backgroundColor: "#ddd",
     borderRadius: 3,
-    alignSelf: "center",
-    marginBottom: 15,
   },
   title: {
     fontSize: 20,
