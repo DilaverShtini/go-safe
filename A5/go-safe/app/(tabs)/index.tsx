@@ -58,11 +58,11 @@ const SAFE_DISTANCE_THRESHOLD = 0.0012;
 
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
-  
+
   // --- STATE ---
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [destination, setDestination] = useState<{ latitude: number; longitude: number } | null>(null);
-  
+
   const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number; longitude: number }[]>([]);
   const [isRouting, setIsRouting] = useState(false);
   const [routeStatus, setRouteStatus] = useState<'safe' | 'danger'>('safe');
@@ -241,7 +241,7 @@ export default function MapScreen() {
 
       const coords = bestChoice.route.geometry.coordinates.map((c: number[]) => ({ latitude: c[1], longitude: c[0] }));
       setRouteCoordinates(coords);
-      
+
       setTimeout(() => {
           mapRef.current?.fitToCoordinates(coords, {
               edgePadding: { top: 100, right: 50, bottom: 200, left: 50 },
@@ -347,14 +347,54 @@ export default function MapScreen() {
         
         {/* DESTINAZIONE */}
         {destination && <Marker coordinate={destination} title="Arrivo" pinColor="red" />}
-        
+
         {/* MARKER SEGNALAZIONI */}
         {reports.map((report) => (
           <Marker
             key={report.id}
             coordinate={{ latitude: report.latitude, longitude: report.longitude }}
-            zIndex={report.id} 
-            calloutAnchor={{ x: 0.5, y: -0.1 }} 
+            zIndex={report.id}
+            calloutAnchor={{ x: 0.5, y: -0.1 }}
+            title={!report.isMyReport ? TYPE_LABELS[report.type] : undefined}
+            description={!report.isMyReport ? report.note : undefined}
+            onPress={() => {
+                  if (report.isMyReport) {
+                const noteText = report.note && report.note.trim() !== "" 
+                    ? `Nota: "${report.note}"` 
+                    : "Nessuna nota aggiuntiva.";
+
+                Alert.alert(
+                  `Tipo segnalazione: ${TYPE_LABELS[report.type]}`,
+                  `${noteText}\n\nCosa vuoi fare?`,
+                  [
+                    { 
+                      text: "Elimina", 
+                      style: "destructive",
+                      onPress: () => {
+                        Alert.alert(
+                          "Sei sicuro?",
+                          "L'eliminazione è definitiva e non può essere annullata.",
+                          [
+                            { 
+                              text: "Elimina definitivamente", 
+                              style: "destructive", 
+                              onPress: () => {
+                                setReports((prev) => prev.filter((r) => r.id !== report.id));
+                              }
+                            },
+                            { text: "Annulla", style: "cancel" }
+                          ]
+                        );
+                      }
+                    },
+                    { 
+                      text: "Chiudi", 
+                      style: "cancel"
+                    } 
+                  ]
+                );
+              }}
+            }
           >
             {/* ICONA PERSONALIZZATA */}
             <View style={[styles.markerBg, { backgroundColor: TYPE_COLORS[report.type] }]}>
@@ -371,17 +411,43 @@ export default function MapScreen() {
                 tooltip={true} 
                 onPress={() => {
                   if (report.isMyReport) {
-                    Alert.alert("Gestione", "Eliminare questa segnalazione?", [
-                        { text: "Annulla", style: "cancel" },
-                        { 
-                          text: "Elimina", 
-                          style: "destructive", 
-                          onPress: () => setReports(p => p.filter(r => r.id !== report.id)) 
-                        },
-                    ]);
-                  }
-                }}
-            >
+                const noteText = report.note && report.note.trim() !== "" 
+                    ? `Nota: "${report.note}"` 
+                    : "Nessuna nota aggiuntiva.";
+
+                Alert.alert(
+                  `Tipo segnalazione: ${TYPE_LABELS[report.type]}`,
+                  `${noteText}\n\nCosa vuoi fare?`,
+                  [
+                    { 
+                      text: "Elimina", 
+                      style: "destructive",
+                      onPress: () => {
+                        Alert.alert(
+                          "Sei sicuro?",
+                          "L'eliminazione è definitiva e non può essere annullata.",
+                          [
+                            { 
+                              text: "Elimina definitivamente", 
+                              style: "destructive", 
+                              onPress: () => {
+                                setReports((prev) => prev.filter((r) => r.id !== report.id));
+                              }
+                            },
+                            { text: "Annulla", style: "cancel" }
+                          ]
+                        );
+                      }
+                    },
+                    { 
+                      text: "Chiudi", 
+                      style: "cancel"
+                    } 
+                  ]
+                );
+              }
+            }}
+          >
                 <View style={styles.calloutContainer}>
                     <Text style={styles.calloutTitle}>{TYPE_LABELS[report.type]}</Text>
                     
@@ -422,11 +488,11 @@ export default function MapScreen() {
       </MapView>
 
       <SearchBar onSearchLocation={handleDestinationSearch} />
-      
+
       {isRouting && (
         <View style={styles.loaderContainer}><ActivityIndicator size="large" color="#6c5ce7" /></View>
       )}
-      
+
       {/* SCHEDA INFO NAVIGAZIONE */}
       {routeInfo && (
           <View style={styles.infoCard}>
@@ -451,7 +517,7 @@ export default function MapScreen() {
       <TouchableOpacity 
         style={[
             styles.myLocationButton, 
-            routeInfo ? { bottom: 220 } : { bottom: 110 } 
+            routeInfo ? { bottom: 220 } : { bottom: 100 }
         ]} 
         onPress={handleCenterOnUser}
       >
@@ -461,7 +527,7 @@ export default function MapScreen() {
       {/* TASTO REPORT */}
       <FloatingReportButton 
           onPress={handleFloatingButtonPress} 
-          style={ routeInfo ? { bottom: 150 } : undefined }
+          style={ routeInfo ? { bottom: 140 } : undefined }
       />
 
       <ReportModal
