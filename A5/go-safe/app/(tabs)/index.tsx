@@ -16,7 +16,6 @@ import SearchBar from "../../src/components/SearchBar";
 import FloatingReportButton from "../../src/components/FloatingReportButton";
 import ReportModal from "../../src/components/ReportModal";
 
-// --- INTERFACCE ---
 interface Report {
   id: number;
   latitude: number;
@@ -31,7 +30,6 @@ interface RouteInfo {
   duration: number;
 }
 
-// --- COSTANTI ---
 const TYPE_ICONS: Record<string, any> = {
   danger: "alert-octagon", darkness: "lightbulb-off", desolate: "road-variant",
   stray: "dog-side", suspicious: "account-alert", weather: "weather-lightning-rainy",
@@ -59,7 +57,6 @@ const SAFE_DISTANCE_THRESHOLD = 0.0012;
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
 
-  // --- STATE ---
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [destination, setDestination] = useState<{ latitude: number; longitude: number } | null>(null);
 

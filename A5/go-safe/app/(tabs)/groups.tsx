@@ -54,7 +54,7 @@ const INITIAL_GROUPS: GroupItem[] = [
 
 export default function GroupsScreen() {
   const [groups, setGroups] = useState<GroupItem[]>(INITIAL_GROUPS);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
 
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
@@ -133,7 +133,7 @@ export default function GroupsScreen() {
       edges={['top', 'left', 'right']} 
     >
       <View style={styles.container}>
-        
+
         <GroupsHeader 
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -199,7 +199,7 @@ export default function GroupsScreen() {
             onConfirm={confirmLeaveGroup}
             onCancel={() => setConfirmVisible(false)}
         />
-        
+
       </View>
     </SafeAreaView>
   );

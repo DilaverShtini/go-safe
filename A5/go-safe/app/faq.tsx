@@ -54,7 +54,6 @@ export default function FaqScreen() {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  // Funzione per aprire la chat di supporto
   const handleOpenSupportChat = () => {
       router.push({
           pathname: "/detail",
@@ -64,6 +63,7 @@ export default function FaqScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -74,7 +74,7 @@ export default function FaqScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        
+
         {/* Intro Box */}
         <View style={styles.introBox}>
             <MaterialCommunityIcons name="lifebuoy" size={40} color="#6C5CE7" style={{marginBottom: 10}}/>
@@ -86,7 +86,7 @@ export default function FaqScreen() {
 
         {/* Lista FAQ (Accordion) */}
         <Text style={styles.sectionTitle}>Domande Frequenti</Text>
-        
+
         {FAQ_DATA.map((item) => {
             const isExpanded = expandedId === item.id;
             return (
@@ -106,7 +106,7 @@ export default function FaqScreen() {
                             color={isExpanded ? "#6C5CE7" : "#999"} 
                         />
                     </View>
-                    
+
                     {isExpanded && (
                         <View style={styles.answerContainer}>
                             <Text style={styles.answerText}>{item.answer}</Text>

@@ -144,7 +144,7 @@ export default function ProfileScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          
+
           <View style={styles.imageContainer}>
             <TouchableOpacity onPress={handleProfileImagePress} activeOpacity={isEditing ? 0.7 : 1}>
               {userInfo.image ? (
@@ -154,14 +154,14 @@ export default function ProfileScreen() {
                   <Ionicons name="person" size={60} color="#ccc" />
                 </View>
               )}
-              
+
               {isEditing && (
                 <View style={styles.editBadge}>
                   <Ionicons name="camera" size={20} color="white" />
                 </View>
               )}
             </TouchableOpacity>
-            
+
             <TouchableOpacity 
                 style={styles.editActionLink} 
                 onPress={() => isEditing ? handleSave() : setIsEditing(true)}
@@ -195,7 +195,7 @@ export default function ProfileScreen() {
                     onChangeText={(text) => setUserInfo({...userInfo, bio: text})}
                 />
             </View>
-            
+
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Email</Text>
                 <TextInput
@@ -210,7 +210,7 @@ export default function ProfileScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Social Network</Text>
-            
+
             <View style={styles.socialRow}>
                 <MaterialCommunityIcons name="instagram" size={28} color="#C13584" />
                 <TextInput

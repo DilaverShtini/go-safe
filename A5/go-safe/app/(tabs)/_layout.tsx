@@ -11,7 +11,7 @@ export default function Layout() {
         tabBarInactiveTintColor: "#999",
       }}
     >
-      {/* MAPPA (index) */}
+      {/* MAPPA */}
       <Tabs.Screen
         name="index"
         options={{

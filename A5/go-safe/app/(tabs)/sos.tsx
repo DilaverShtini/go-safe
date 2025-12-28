@@ -25,7 +25,6 @@ const MOCK_CONTACTS: Contact[] = [
   { id: "1", name: "Mario", relation: "Genitore", phoneNumber: "+390000000000" },
   { id: "2", name: "Maria", relation: "Genitore", phoneNumber: "+390000000000" },
   { id: "3", name: "Numero Emergenza", relation: "Servizi", phoneNumber: "11" },
-  { id: "4", name: "Superman", relation: "Supereroe", phoneNumber: "+390000000000" },
 ];
 
 export default function SosScreen() {

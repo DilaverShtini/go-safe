@@ -18,8 +18,7 @@ export default function ChatScreen() {
   const router = useRouter();
   const [isModalVisible, setModalVisible] = useState(false);
   const [chatList, setChatList] = useState<ChatItem[]>(GLOBAL_CHATS);
-  
-  // Ricarica la lista ordinata dei messaggi
+
   useFocusEffect(
     useCallback(() => {
       const sorted = [...GLOBAL_CHATS].sort((a, b) => {
@@ -45,7 +44,7 @@ export default function ChatScreen() {
       goToChat(tempId, contactName);
     }
   };
-  
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.screenHeader}>
