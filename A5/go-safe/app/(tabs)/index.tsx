@@ -9,7 +9,7 @@ import {
   Linking, 
   Platform 
 } from "react-native";
-import MapView, { Marker, MapPressEvent, Polyline, PROVIDER_DEFAULT, Callout } from "react-native-maps";
+import MapView, { Marker, MapPressEvent, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import * as Location from "expo-location";
 import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import SearchBar from "../../src/components/SearchBar";
@@ -66,9 +66,19 @@ export default function MapScreen() {
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
 
   const [selectedPoint, setSelectedPoint] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [lastReportId, setLastReportId] = useState<number | null>(null);
+
+  const [tracksViewChanges, setTracksViewChanges] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTracksViewChanges(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [reports]);
 
   useEffect(() => {
     (async () => {
@@ -226,7 +236,9 @@ export default function MapScreen() {
       
       if (bestChoice.danger > 0) {
           setRouteStatus('danger');
-          Alert.alert("Attenzione", "Tutte le strade possibili passano vicino a una segnalazione.");
+          setTimeout(() => {
+            Alert.alert("Attenzione", "Tutte le strade possibili passano vicino a una segnalazione.");
+          }, 100);
       } else {
           setRouteStatus('safe');
       }
@@ -248,7 +260,7 @@ export default function MapScreen() {
 
     } catch (error) {
       console.error(error);
-      Alert.alert("Errore", "Errore di connessione mappe.");
+      setTimeout(() => { Alert.alert("Errore", "Errore di connessione mappe."); }, 100);
     } finally {
       setIsRouting(false);
     }
@@ -257,6 +269,7 @@ export default function MapScreen() {
   const handleDestinationSearch = (coords: { latitude: number; longitude: number }) => {
     setDestination(coords);
     setSelectedPoint(null);
+    setSelectedReport(null);
     if (userLocation) {
         fetchRoute(userLocation, coords);
     } else {
@@ -271,6 +284,10 @@ export default function MapScreen() {
 
   const handleMapPress = (e: MapPressEvent) => {
     if (modalVisible) return;
+    if (selectedReport) {
+        setSelectedReport(null);
+        return;
+    }
     setSelectedPoint(e.nativeEvent.coordinate);
   };
 
@@ -293,6 +310,8 @@ export default function MapScreen() {
       note: note,
       isMyReport: true,
     };
+    
+    setTracksViewChanges(true);
     setReports((prev) => [...prev, newReport]);
     setLastReportId(newId);
     setSelectedPoint(null);
@@ -321,6 +340,26 @@ export default function MapScreen() {
       }
   };
 
+  const handleDeleteReport = () => {
+      if (!selectedReport) return;
+      
+      Alert.alert(
+          "Elimina segnalazione",
+          "Sei sicuro di voler eliminare questa segnalazione?",
+          [
+              { text: "Annulla", style: "cancel" },
+              {
+                  text: "Elimina",
+                  style: "destructive",
+                  onPress: () => {
+                      setReports((prev) => prev.filter((r) => r.id !== selectedReport.id));
+                      setSelectedReport(null);
+                  }
+              }
+          ]
+      );
+  };
+
   return (
     <View style={styles.container}>
       <MapView
@@ -332,7 +371,6 @@ export default function MapScreen() {
         initialRegion={DEFAULT_REGION} 
         onPress={handleMapPress}
       >
-        {/* PERCORSO */}
         {routeCoordinates.length > 0 && (
             <Polyline 
               coordinates={routeCoordinates} 
@@ -342,58 +380,23 @@ export default function MapScreen() {
             />
         )}
         
-        {/* DESTINAZIONE */}
         {destination && <Marker coordinate={destination} title="Arrivo" pinColor="red" />}
 
-        {/* MARKER SEGNALAZIONI */}
         {reports.map((report) => (
           <Marker
             key={report.id}
             coordinate={{ latitude: report.latitude, longitude: report.longitude }}
             zIndex={report.id}
-            calloutAnchor={{ x: 0.5, y: -0.1 }}
-            title={!report.isMyReport ? TYPE_LABELS[report.type] : undefined}
-            description={!report.isMyReport ? report.note : undefined}
-            onPress={() => {
-                  if (report.isMyReport) {
-                const noteText = report.note && report.note.trim() !== "" 
-                    ? `Nota: "${report.note}"` 
-                    : "Nessuna nota aggiuntiva.";
-
-                Alert.alert(
-                  `Tipo segnalazione: ${TYPE_LABELS[report.type]}`,
-                  `${noteText}\n\nCosa vuoi fare?`,
-                  [
-                    { 
-                      text: "Elimina", 
-                      style: "destructive",
-                      onPress: () => {
-                        Alert.alert(
-                          "Sei sicuro?",
-                          "L'eliminazione è definitiva e non può essere annullata.",
-                          [
-                            { 
-                              text: "Elimina definitivamente", 
-                              style: "destructive", 
-                              onPress: () => {
-                                setReports((prev) => prev.filter((r) => r.id !== report.id));
-                              }
-                            },
-                            { text: "Annulla", style: "cancel" }
-                          ]
-                        );
-                      }
-                    },
-                    { 
-                      text: "Chiudi", 
-                      style: "cancel"
-                    } 
-                  ]
-                );
-              }}
-            }
+            anchor={{ x: 0.5, y: 0.5 }}
+            tracksViewChanges={tracksViewChanges}
+            onPress={(e) => {
+                e.stopPropagation();
+                requestAnimationFrame(() => {
+                    setSelectedReport(report);
+                    setSelectedPoint(null);
+                });
+            }}
           >
-            {/* ICONA PERSONALIZZATA */}
             <View style={[styles.markerBg, { backgroundColor: TYPE_COLORS[report.type] }]}>
               <MaterialCommunityIcons name={TYPE_ICONS[report.type]} size={20} color="white" />
               {report.isMyReport && (
@@ -402,85 +405,18 @@ export default function MapScreen() {
                 </View>
               )}
             </View>
-
-            {/* CALLOUT */}
-            <Callout 
-                tooltip={true} 
-                onPress={() => {
-                  if (report.isMyReport) {
-                const noteText = report.note && report.note.trim() !== "" 
-                    ? `Nota: "${report.note}"` 
-                    : "Nessuna nota aggiuntiva.";
-
-                Alert.alert(
-                  `Tipo segnalazione: ${TYPE_LABELS[report.type]}`,
-                  `${noteText}\n\nCosa vuoi fare?`,
-                  [
-                    { 
-                      text: "Elimina", 
-                      style: "destructive",
-                      onPress: () => {
-                        Alert.alert(
-                          "Sei sicuro?",
-                          "L'eliminazione è definitiva e non può essere annullata.",
-                          [
-                            { 
-                              text: "Elimina definitivamente", 
-                              style: "destructive", 
-                              onPress: () => {
-                                setReports((prev) => prev.filter((r) => r.id !== report.id));
-                              }
-                            },
-                            { text: "Annulla", style: "cancel" }
-                          ]
-                        );
-                      }
-                    },
-                    { 
-                      text: "Chiudi", 
-                      style: "cancel"
-                    } 
-                  ]
-                );
-              }
-            }}
-          >
-                <View style={styles.calloutContainer}>
-                    <Text style={styles.calloutTitle}>{TYPE_LABELS[report.type]}</Text>
-                    
-                    <Text style={styles.calloutNote}>
-                      {report.note ? report.note : "Nessuna descrizione"}
-                    </Text>
-
-                    {report.isMyReport && (
-                        <View style={styles.calloutFooter}>
-                            <MaterialCommunityIcons name="trash-can-outline" size={14} color="#e74c3c" />
-                            <Text style={styles.calloutDeleteText}> Tocca per eliminare</Text>
-                        </View>
-                    )}
-                </View>
-            </Callout>
           </Marker>
         ))}
 
-        {/* PUNTO SELEZIONATO */}
         {selectedPoint && (
           <Marker 
             coordinate={selectedPoint} 
             title="Punto Selezionato" 
             pinColor="red"
             opacity={1.0}
+            tracksViewChanges={false}
             onPress={(e) => { e.stopPropagation(); setSelectedPoint(null); }}
-          >
-             <Callout tooltip>
-                <View style={styles.calloutContainer}>
-                    <Text style={styles.calloutTitle}>Nuova posizione</Text>
-                    <Text style={[styles.calloutNote, {fontStyle: 'italic', color: '#666'}]}>
-                        (Tocca il marker per rimuovere)
-                    </Text>
-                </View>
-             </Callout>
-          </Marker>
+          />
         )}
       </MapView>
 
@@ -490,8 +426,34 @@ export default function MapScreen() {
         <View style={styles.loaderContainer}><ActivityIndicator size="large" color="#6c5ce7" /></View>
       )}
 
-      {/* SCHEDA INFO NAVIGAZIONE */}
-      {routeInfo && (
+      {/* --- SCHEDA INFO SEGNALAZIONE --- */}
+      {selectedReport && (
+          <View style={styles.reportCard}>
+              <View style={styles.reportHeader}>
+                  <View style={[styles.iconBox, { backgroundColor: TYPE_COLORS[selectedReport.type] }]}>
+                      <MaterialCommunityIcons name={TYPE_ICONS[selectedReport.type]} size={24} color="white" />
+                  </View>
+                  <View style={{flex: 1, marginLeft: 10}}>
+                      <Text style={styles.reportTitle}>{TYPE_LABELS[selectedReport.type]}</Text>
+                      <Text style={styles.reportNote} numberOfLines={2}>
+                          {selectedReport.note ? selectedReport.note : "Nessuna descrizione disponibile"}
+                      </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setSelectedReport(null)} style={{padding: 5}}>
+                      <Ionicons name="close" size={24} color="#999" />
+                  </TouchableOpacity>
+              </View>
+
+              {selectedReport.isMyReport && (
+                  <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteReport}>
+                      <MaterialCommunityIcons name="trash-can-outline" size={20} color="white" />
+                      <Text style={styles.deleteButtonText}>Elimina Segnalazione</Text>
+                  </TouchableOpacity>
+              )}
+          </View>
+      )}
+
+      {routeInfo && !selectedReport && (
           <View style={styles.infoCard}>
               <View style={styles.infoTextContainer}>
                   <View style={styles.infoRow}>
@@ -510,22 +472,22 @@ export default function MapScreen() {
           </View>
       )}
 
-      {/* TASTO GPS */}
       <TouchableOpacity 
         style={[
             styles.myLocationButton, 
-            routeInfo ? { bottom: 220 } : { bottom: 100 }
+            (routeInfo || selectedReport) ? { bottom: 220 } : { bottom: 100 }
         ]} 
         onPress={handleCenterOnUser}
       >
         <MaterialCommunityIcons name="crosshairs-gps" size={28} color="#333" />
       </TouchableOpacity>
 
-      {/* TASTO REPORT */}
-      <FloatingReportButton 
-          onPress={handleFloatingButtonPress} 
-          style={ routeInfo ? { bottom: 140 } : undefined }
-      />
+      {!selectedReport && (
+          <FloatingReportButton 
+              onPress={handleFloatingButtonPress} 
+              style={ routeInfo ? { bottom: 140 } : undefined }
+          />
+      )}
 
       <ReportModal
         visible={modalVisible}
@@ -561,51 +523,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', borderWidth: 1, borderColor: 'white'
   },
 
-  calloutContainer: {
-    backgroundColor: "white",
-    padding: 12,
-    borderRadius: 12,
-    width: 200, 
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-    marginBottom: 5 
-  },
-  calloutTitle: {
-    fontWeight: "bold",
-    fontSize: 15,
-    marginBottom: 4,
-    color: "#333",
-    textAlign: 'center'
-  },
-  calloutNote: {
-    fontSize: 13,
-    color: "#555",
-    marginBottom: 8,
-    textAlign: 'center'
-  },
-  calloutFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 5,
-    paddingTop: 5,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    width: '100%',
-    justifyContent: 'center'
-  },
-  calloutDeleteText: {
-    fontSize: 11,
-    color: "#e74c3c", 
-    fontWeight: "600",
-  },
-
   loaderContainer: {
     position: "absolute",
     top: 120,
@@ -621,6 +538,7 @@ const styles = StyleSheet.create({
     elevation: 5, shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25, shadowRadius: 3.84, zIndex: 1000,
   },
+  
   infoCard: {
       position: 'absolute',
       bottom: 40,
@@ -646,4 +564,57 @@ const styles = StyleSheet.create({
   divider: { width: 1, height: '80%', backgroundColor: '#dfe6e9', marginHorizontal: 15 },
   closeBtn: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
   closeBtnText: { color: '#e74c3c', fontSize: 14, fontWeight: '600', marginTop: 4 },
+
+  reportCard: {
+      position: 'absolute',
+      bottom: 40,
+      left: 20,
+      right: 20,
+      backgroundColor: 'white',
+      borderRadius: 16,
+      padding: 16,
+      elevation: 15,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 5 },
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+      zIndex: 999,
+  },
+  reportHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginBottom: 15
+  },
+  iconBox: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  reportTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: '#333',
+      marginBottom: 4
+  },
+  reportNote: {
+      fontSize: 14,
+      color: '#666',
+      lineHeight: 20
+  },
+  deleteButton: {
+      backgroundColor: '#e74c3c',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      borderRadius: 12,
+  },
+  deleteButtonText: {
+      color: 'white',
+      fontWeight: 'bold',
+      marginLeft: 8,
+      fontSize: 15
+  }
 });
