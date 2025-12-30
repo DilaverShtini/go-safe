@@ -26,10 +26,31 @@ const OSMInput = ({ label, placeholder, value, onSelect, zIndex }: any) => {
     const [showList, setShowList] = useState(false);
 
     const handleSelect = (item: any) => {
-        const shortName = item.display_name.split(',')[0];
-        setQuery(shortName); 
-        setShowList(false);          
-        onSelect(shortName); 
+        if (timer) clearTimeout(timer);
+        const addr = item.address || {};
+        let smartName = "";
+        const poiName = addr.amenity || addr.shop || addr.tourism || addr.leisure || addr.building || addr.historic || addr.railway;
+        if (poiName) {
+            smartName = poiName;
+        } else if (addr.road || addr.pedestrian || addr.square) {
+            smartName = addr.road || addr.pedestrian || addr.square;
+            if (addr.house_number) {
+                smartName += ` ${addr.house_number}`;
+            }
+        } else {
+            smartName = item.display_name.split(',')[0];
+        }
+        smartName = smartName.charAt(0).toUpperCase() + smartName.slice(1);
+        const cityName = addr.city || addr.town || addr.village || addr.municipality || addr.hamlet;
+        let finalName = smartName;
+        if (cityName && smartName.toLowerCase() !== cityName.toLowerCase()) {
+            finalName = `${smartName}, ${cityName}`;
+        }
+        setQuery(finalName); 
+        onSelect(finalName); 
+        setResults([]);      
+        setShowList(false);  
+        Keyboard.dismiss();  
     };
 
     const handleBlur = () => {

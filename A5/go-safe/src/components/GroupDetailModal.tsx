@@ -172,8 +172,13 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin, onLe
             <TouchableOpacity onPress={onClose} style={styles.backButton}>
               <Feather name="arrow-left" size={26} color="#333" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{group.name}</Text>
-            <View style={{ width: 26 }} /> 
+            <View style={styles.headerTitleContainer}>
+                <Text style={styles.headerTitle}>
+                    {group.name}
+                </Text>
+            </View>
+
+            <View style={styles.headerRightPlaceholder} /> 
           </View>
 
           <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -300,9 +305,37 @@ const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpaci
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#F8F9FA" },
   container: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 15 },
-  backButton: { padding: 5 },
-  headerTitle: { fontSize: 20, fontWeight: "bold", color: "#333" },
+  header: { 
+    flexDirection: "row", 
+    alignItems: "center",
+    justifyContent: "space-between", 
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    borderBottomWidth: 1, 
+    borderBottomColor: "#f0f0f0",
+    backgroundColor: "white",
+    minHeight: 60
+  },
+  headerTitleContainer: {
+      flex: 1, 
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      justifyContent: 'center'
+  },
+  headerTitle: { 
+    fontSize: 17,
+    fontWeight: "bold", 
+    color: "#333",
+    textAlign: "center",
+    lineHeight: 22
+  },
+  backButton: { 
+    padding: 8,
+    zIndex: 10
+  },
+  headerRightPlaceholder: {
+      width: 40
+  },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   sectionLabel: { textAlign: "center", fontSize: 14, color: "#666", marginTop: 20, marginBottom: 10, fontWeight: "500" },
   card: { flexDirection: "row", alignItems: "center", backgroundColor: "white", borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: "#E0E0E0", elevation: 2, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } },
@@ -357,5 +390,5 @@ const styles = StyleSheet.create({
     color: "#D32F2F",
     fontWeight: "bold", 
     fontSize: 16 
-  },
+  }
 });
