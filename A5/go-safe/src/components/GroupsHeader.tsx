@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 16,
+    marginVertical: 12,
     gap: 10,
   },
   iconButton: {

@@ -73,6 +73,8 @@ export default function MapScreen() {
 
   const [tracksViewChanges, setTracksViewChanges] = useState(true);
 
+  const [searchKey, setSearchKey] = useState(0);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setTracksViewChanges(false);
@@ -270,6 +272,7 @@ export default function MapScreen() {
     setDestination(coords);
     setSelectedPoint(null);
     setSelectedReport(null);
+    setSearchKey((prev) => prev + 1);
     if (userLocation) {
         fetchRoute(userLocation, coords);
     } else {
@@ -420,7 +423,7 @@ export default function MapScreen() {
         )}
       </MapView>
 
-      <SearchBar onSearchLocation={handleDestinationSearch} />
+      <SearchBar key={searchKey} onSearchLocation={handleDestinationSearch} />
 
       {isRouting && (
         <View style={styles.loaderContainer}><ActivityIndicator size="large" color="#6c5ce7" /></View>
