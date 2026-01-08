@@ -86,7 +86,7 @@ export default function ReportModal({ visible, onClose, onSubmit, onUndo }: Repo
       timerRef.current = setTimeout(() => {
         setShowSuccessToast(false);
         onClose();
-      }, 3000); 
+      }, 1500); 
     }
   };
 

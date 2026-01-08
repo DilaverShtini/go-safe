@@ -52,7 +52,7 @@ const DEFAULT_REGION = {
   longitudeDelta: 0.05,
 };
 
-const SAFE_DISTANCE_THRESHOLD = 0.0012; 
+const SAFE_DISTANCE_THRESHOLD = 0.001; 
 
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
@@ -175,7 +175,7 @@ export default function MapScreen() {
   const getDetourPoints = (start: any, end: any) => {
       const midLat = (start.latitude + end.latitude) / 2;
       const midLon = (start.longitude + end.longitude) / 2;
-      const offset = 0.00150;
+      const offset = 0.00180;
       return [
           { latitude: midLat + offset, longitude: midLon },
           { latitude: midLat - offset, longitude: midLon },
@@ -477,7 +477,7 @@ export default function MapScreen() {
       <TouchableOpacity 
         style={[
             styles.myLocationButton, 
-            (routeInfo || selectedReport) ? { bottom: 220 } : { bottom: 100 }
+            (routeInfo || selectedReport) ? { bottom: 210 } : { bottom: 90 }
         ]} 
         onPress={handleCenterOnUser}
       >
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
   
   infoCard: {
       position: 'absolute',
-      bottom: 40,
+      bottom: 30,
       left: 20,
       right: 20,
       backgroundColor: 'white',
