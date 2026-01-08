@@ -13,7 +13,6 @@ import {
 import { MaterialCommunityIcons, Feather, FontAwesome } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Interfacce Dati
 export interface Review {
   id: string;
   title: string;
@@ -64,7 +63,6 @@ export default function UserProfileModal({ visible, user, onClose, onUpdateUser 
     setEditingReviewId(null);
   };
 
-  // Calcolo media voti
   const calculateAverageRating = (reviews: Review[]) => {
     if (!reviews || reviews.length === 0) return 0;
     const total = reviews.reduce((sum, review) => sum + review.rating, 0);

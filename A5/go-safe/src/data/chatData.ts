@@ -12,61 +12,97 @@ export interface Message {
   sender: string;
 }
 
-// Lista Globale delle Chat
 export let GLOBAL_CHATS: ChatItem[] = [
-  { id: 'c1', user: 'Mario Rossi', lastMessage: 'Perfetto, ci vediamo domani.', time: '15:30', sortDate: '2025-11-26T15:30:00Z' },
-  { id: 'c2', user: 'Anna Bianchi', lastMessage: 'Hai ricevuto il documento?', time: 'Ieri', sortDate: '2025-11-25T10:00:00Z' },
-  { id: 'c3', user: 'Luca Verdi', lastMessage: 'Grazie mille per l\'aiuto!', time: 'Lunedì', sortDate: '2025-11-24T10:00:00Z' },
-  { id: 'c4', user: 'Sofia Neri', lastMessage: 'Non dimenticare di chiamarmi.', time: '23/11', sortDate: '2025-11-23T10:00:00Z' },
-  { id: 'c5', user: 'Giovanni Gialli', lastMessage: 'Tutto chiaro, procedo.', time: '14:00', sortDate: '2025-11-26T14:00:00Z' },
-  { id: 'c6', user: 'Elena Marroni', lastMessage: 'Ti richiamo più tardi.', time: '12:05', sortDate: '2025-11-26T12:05:00Z' },
+  { 
+    id: 'c1', 
+    user: 'Giulia Bianchi', 
+    lastMessage: 'Perfetto, ti aspetto vicino all\'edicola.', 
+    time: '18:45', 
+    sortDate: '2025-12-17T18:45:00Z' 
+  },
+  { 
+    id: 'c2', 
+    user: 'Marco Rossi', 
+    lastMessage: 'Sto uscendo ora dalla biblioteca.', 
+    time: '18:30', 
+    sortDate: '2025-12-17T18:30:00Z' 
+  },
+  { 
+    id: 'c3', 
+    user: 'Sara Verdi', 
+    lastMessage: 'Siamo in 3, ci vediamo al punto di ritrovo.', 
+    time: 'Ieri', 
+    sortDate: '2025-12-16T22:15:00Z' 
+  },
+  { 
+    id: 'c4', 
+    user: 'Alessandro Rosa', 
+    lastMessage: 'Grazie per la compagnia, a domani!', 
+    time: 'Ieri', 
+    sortDate: '2025-12-16T21:00:00Z' 
+  },
+  { 
+    id: 'c5', 
+    user: 'Francesca Neri', 
+    lastMessage: 'Ok, passo per Via Roma che è più illuminata.', 
+    time: '15/12', 
+    sortDate: '2025-12-15T19:30:00Z' 
+  },
+  { 
+    id: 'support_team', 
+    user: 'Supporto Clienti', 
+    lastMessage: 'Benvenuto nel Centro Assistenza.', 
+    time: '01/12', 
+    sortDate: '2025-12-01T09:00:00Z' 
+  },
 ];
 
-// Messaggi
 export const DUMMY_MESSAGES: Record<string, Message[]> = {
   c1: [
-    { id: '1', text: 'Ciao Mario!', sender: 'me' },
-    { id: '2', text: 'Ciao! Riesci a vederci per il progetto?', sender: 'other' },
-    { id: '3', text: 'Sì, ti confermo la disponibilità per domani.', sender: 'me' },
-    { id: '4', text: 'Ok, il punto di ritrovo rimane quello in piazza?', sender: 'other' },
-    { id: '5', text: 'Perfetto, ci vediamo domani alle 10:00.', sender: 'me' },
+    { id: '1', text: 'Ciao Giulia, ho visto che fai anche tu la strada dalla stazione verso il centro.', sender: 'me' },
+    { id: '2', text: 'Ciao! Sì, scendo dal treno delle 18:50.', sender: 'other' },
+    { id: '3', text: 'Ottimo, anche io. Ti va se facciamo il pezzo a piedi insieme? C\'è quel sottopassaggio poco illuminato...', sender: 'me' },
+    { id: '4', text: 'Volentieri! Non mi piace mai farlo da sola.', sender: 'other' },
+    { id: '5', text: 'D\'accordo allora. Io ho una giacca rossa.', sender: 'me' },
+    { id: '6', text: 'Perfetto, ti aspetto vicino all\'edicola.', sender: 'other' },
   ],
+
   c2: [
-    { id: '1', text: 'Ciao Anna, come va la migrazione?', sender: 'me' },
-    { id: '2', text: 'Bene, grazie! Quando mi invii i dati finali?', sender: 'other' },
-    { id: '3', text: 'Te li mando oggi pomeriggio.', sender: 'me' },
-    { id: '4', text: 'Te l\'ho appena inviato via mail.', sender: 'other' },
-    { id: '5', text: 'Hai ricevuto il documento?', sender: 'me' },
-    { id: '6', text: 'Sì, grazie. Lo guardo subito.', sender: 'other' },
+    { id: '1', text: 'Ehi Marco, sei ancora in aula studio?', sender: 'me' },
+    { id: '2', text: 'Sì, stavo finendo un capitolo. Tu?', sender: 'other' },
+    { id: '3', text: 'Io ho finito ora. Volevo andare al parcheggio multipiano ma a quest\'ora è deserto.', sender: 'me' },
+    { id: '4', text: 'Capisco, neanche a me fa impazzire. Aspettami 5 minuti che scendo.', sender: 'other' },
+    { id: '5', text: 'Ok, ti aspetto nell\'atrio.', sender: 'me' },
+    { id: '6', text: 'Sto uscendo ora dalla biblioteca.', sender: 'other' },
   ],
+
   c3: [
-    { id: '1', text: 'Ciao Luca!', sender: 'me' },
-    { id: '2', text: 'Non riesco a caricare i dati.', sender: 'other' },
-    { id: '3', text: 'Hai provato a ripulire la cache del server?', sender: 'me' },
-    { id: '4', text: 'Sì, ora funziona. Sono riuscito a risolvere il bug seguendo la tua guida.', sender: 'other' },
-    { id: '5', text: 'Figurati! Fammi sapere se hai problemi.', sender: 'me' },
-    { id: '6', text: 'Grazie mille per l\'aiuto!', sender: 'other' },
+    { id: '1', text: 'Ciao Sara, sei l\'organizzatrice del gruppo "Zona Stadio"?', sender: 'me' },
+    { id: '2', text: 'Ciao! Sì esatto, partiamo tra 20 minuti.', sender: 'other' },
+    { id: '3', text: 'Posso unirmi? Sono a piedi.', sender: 'me' },
+    { id: '4', text: 'Certamente! Più siamo meglio è.', sender: 'other' },
+    { id: '5', text: 'Dove vi trovo di preciso?', sender: 'me' },
+    { id: '6', text: 'Siamo in 3, ci vediamo al punto di ritrovo, proprio sotto il lampione all\'ingresso.', sender: 'other' },
   ],
+
   c4: [
-    { id: '1', text: 'Ciao Sofia!', sender: 'me' },
-    { id: '2', text: 'Sei a casa per le 20:00?', sender: 'other' },
-    { id: '3', text: 'Sì, sono appena arrivata.', sender: 'me' },
-    { id: '4', text: 'Certo, ti chiamo dopo cena.', sender: 'other' },
-    { id: '5', text: 'Non dimenticare di chiamarmi.', sender: 'me' },
+    { id: '1', text: 'Ale, stasera prendi il bus delle 20:30?', sender: 'me' },
+    { id: '2', text: 'Sì, confermato. Solita fermata?', sender: 'other' },
+    { id: '3', text: 'Sì. Hanno segnalato dei cani randagi vicino al parco, preferisco non essere solo.', sender: 'me' },
+    { id: '4', text: 'Tranquillo, facciamo il giro largo insieme.', sender: 'other' },
+    { id: '5', text: 'Arrivato a casa ora. Tutto ok.', sender: 'me' },
+    { id: '6', text: 'Anche io. Grazie per la compagnia, a domani!', sender: 'other' },
   ],
+
   c5: [
-    { id: '1', text: 'Ciao Giovanni!', sender: 'me' },
-    { id: '2', text: 'Confermi che hai ricevuto la lista degli ospiti?', sender: 'other' },
-    { id: '3', text: 'Sì, tutto chiaro. Procedo.', sender: 'me' },
-    { id: '4', text: 'Quindi usiamo il format standard per il report.', sender: 'other' },
+    { id: '1', text: 'Ciao, ho visto il tuo gruppo per arrivare in Via Verdi.', sender: 'other' },
+    { id: '2', text: 'Ciao! Sì, devo portare fuori il cane ma c\'è troppa nebbia stasera.', sender: 'me' },
+    { id: '3', text: 'Io sto passando di lì tra 10 minuti. Se vuoi ci incrociamo.', sender: 'other' },
+    { id: '4', text: 'Va bene. Facciamo la strada del parco o quella principale?', sender: 'me' },
+    { id: '5', text: 'Meglio evitare il parco col buio.', sender: 'other' },
+    { id: '6', text: 'Ok, passo per Via Roma che è più illuminata.', sender: 'me' },
   ],
-  c6: [
-    { id: '1', text: 'Ciao Elena!', sender: 'me' },
-    { id: '2', text: 'Riesci a prendere la documentazione dal sito?', sender: 'other' },
-    { id: '3', text: 'Sì, la scarico ora.', sender: 'me' },
-    { id: '4', text: 'Aspetto la tua conferma allora.', sender: 'other' },
-    { id: '5', text: 'Devo controllare, ti richiamo più tardi.', sender: 'me' },
-  ],
+
   support_team: [
     { id: '1', text: 'Benvenuto nel Centro Assistenza. Come possiamo aiutarti oggi?', sender: 'other' }
   ]

@@ -64,7 +64,6 @@ export default function FaqScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
 
-      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#333" />
@@ -75,7 +74,6 @@ export default function FaqScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
 
-        {/* Intro Box */}
         <View style={styles.introBox}>
             <MaterialCommunityIcons name="lifebuoy" size={40} color="#6C5CE7" style={{marginBottom: 10}}/>
             <Text style={styles.introTitle}>Come possiamo aiutarti?</Text>
@@ -84,7 +82,6 @@ export default function FaqScreen() {
             </Text>
         </View>
 
-        {/* Lista FAQ (Accordion) */}
         <Text style={styles.sectionTitle}>Domande Frequenti</Text>
 
         {FAQ_DATA.map((item) => {
@@ -116,7 +113,6 @@ export default function FaqScreen() {
             );
         })}
 
-        {/* Footer Contatto Chat */}
         <View style={styles.contactFooter}>
             <Text style={styles.footerText}>Hai ancora bisogno di aiuto?</Text>
             

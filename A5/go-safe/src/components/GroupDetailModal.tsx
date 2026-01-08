@@ -43,7 +43,7 @@ const CURRENT_USER_PROFILE: UserProfile = {
     isVerified: true,
     connections: 50,
     trips: 10,
-    rating: 5.0,
+    rating: 0.0,
     reviews: []
 };
 
@@ -195,12 +195,12 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin, onLe
                       <View style={{flex: 1, marginLeft: 15}}>
                           <Text style={styles.participantName}>{participant.name} {isMe && "(Tu)"}</Text>
                           {isMe && (
-                              <Text style={{fontSize: 12, color: '#6C5CE7', fontWeight: '500'}}>
+                              <Text style={{fontSize: 12, color: '#6c5ce7', fontWeight: '500'}}>
                                   {group.isOrganizer ? "Organizzatore" : "Partecipante"}
                               </Text>
                           )}
                           { !isMe && (
-                              <Text style={{fontSize: 10, color: 'green'}}>Connesso</Text>
+                              <Text style={{fontSize: 10, color: 'green'}}>Partecipante</Text>
                           )}
                       </View>
                       
@@ -217,7 +217,7 @@ export default function GroupDetailModal({ visible, group, onClose, onJoin, onLe
                         style={[styles.iconButton, { backgroundColor: '#F3E5F5' }]} 
                         onPress={() => handleOpenProfile(participant)}
                       >
-                        <MaterialCommunityIcons name="eye-outline" size={20} color="#6C5CE7" />
+                      <MaterialCommunityIcons name="eye-outline" size={20} color="#6C5CE7" />
                       </TouchableOpacity>
                     </View>
                 );

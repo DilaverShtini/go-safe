@@ -30,7 +30,6 @@ interface CreateChatModalProps {
 export default function CreateChatModal({ visible, onClose, onSelectContact }: CreateChatModalProps) {
   const [searchText, setSearchText] = useState("");
 
-  // Filtra i contatti in base alla ricerca
   const filteredContacts = MOCK_CONTACTS.filter(contact => 
     contact.name.toLowerCase().includes(searchText.toLowerCase())
   );
@@ -40,7 +39,6 @@ export default function CreateChatModal({ visible, onClose, onSelectContact }: C
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           
-          {/* Header del Modal */}
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose} style={styles.backButton}>
               <Feather name="arrow-left" size={26} color="#333" />
@@ -49,7 +47,6 @@ export default function CreateChatModal({ visible, onClose, onSelectContact }: C
             <View style={{ width: 26 }} /> 
           </View>
 
-          {/* Barra di Ricerca */}
           <View style={styles.searchContainer}>
             <Feather name="search" size={20} color="#666" style={styles.searchIcon} />
             <TextInput 
@@ -60,7 +57,6 @@ export default function CreateChatModal({ visible, onClose, onSelectContact }: C
             />
           </View>
 
-          {/* Lista Contatti */}
           <FlatList
             data={filteredContacts}
             keyExtractor={(item) => item.id}
@@ -70,7 +66,6 @@ export default function CreateChatModal({ visible, onClose, onSelectContact }: C
                 style={styles.contactRow} 
                 onPress={() => onSelectContact(item.name)}
               >
-                {/* Avatar Finto con Iniziale */}
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
                 </View>

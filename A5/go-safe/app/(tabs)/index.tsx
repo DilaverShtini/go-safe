@@ -429,7 +429,6 @@ export default function MapScreen() {
         <View style={styles.loaderContainer}><ActivityIndicator size="large" color="#6c5ce7" /></View>
       )}
 
-      {/* --- SCHEDA INFO SEGNALAZIONE --- */}
       {selectedReport && (
           <View style={styles.reportCard}>
               <View style={styles.reportHeader}>
@@ -536,7 +535,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   myLocationButton: {
-    position: "absolute", right: 20, width: 50, height: 50, borderRadius: 25,
+    position: "absolute", right: 25, width: 50, height: 50, borderRadius: 25,
     backgroundColor: "white", justifyContent: "center", alignItems: "center",
     elevation: 5, shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25, shadowRadius: 3.84, zIndex: 1000,

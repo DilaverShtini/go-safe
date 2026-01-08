@@ -18,16 +18,14 @@ export default function GroupCard({
   startZone, 
   startTime,
   date,
-  initial, 
-  color = "#E1BEE7",
+  initial,
   isJoined = false, 
   onPressEye 
 }: GroupCardProps) {
   return (
     <View style={[styles.card, isJoined && styles.joinedCard]}>
       
-      {/* Avatar */}
-      <View style={[styles.avatarContainer, { backgroundColor: color }]}>
+      <View style={[styles.avatarContainer]}>
         <Text style={styles.avatarText}>{initial}</Text>
         {isJoined && (
           <View style={styles.joinedBadge}>
@@ -36,16 +34,13 @@ export default function GroupCard({
         )}
       </View>
 
-      {/* Info Centrali */}
       <View style={styles.infoContainer}>
         <Text style={styles.groupName} numberOfLines={1}>{name}</Text>
         
-        {/* Luogo */}
         <Text style={styles.groupDetail} numberOfLines={1}>
             {startZone}
         </Text>
 
-        {/* Riga Data e Ora con Icone */}
         <View style={styles.dateTimeRow}>
             <View style={styles.iconTextParams}>
                 <Feather name="calendar" size={14} color="#666" />
@@ -62,7 +57,7 @@ export default function GroupCard({
       </View>
 
       <TouchableOpacity onPress={onPressEye} style={styles.iconContainer}>
-        <MaterialCommunityIcons name="eye-outline" size={28} color="black" />
+      <MaterialCommunityIcons name="eye-outline" size={25} color="#6c5ce7" />
       </TouchableOpacity>
     </View>
   );
@@ -92,6 +87,7 @@ const styles = StyleSheet.create({
   avatarContainer: {
     width: 50,
     height: 50,
+    backgroundColor : "#F3E5F5",
     borderRadius: 25,
     justifyContent: "center",
     alignItems: "center",

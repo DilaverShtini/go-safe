@@ -29,13 +29,11 @@ export default function GroupsHeader({ searchQuery, onSearchChange }: GroupsHead
           </TouchableOpacity>
         )}
       </View>
-      
-      {/* Profile Button */}
       <TouchableOpacity 
         style={styles.iconButton}
         onPress={() => router.push("/profile")}
       >
-        <Ionicons name="person-circle-outline" size={36} color="#7E57C2" />
+        <Ionicons name="person-circle-outline" size={36} color="#6c5ce7" />
       </TouchableOpacity>
     </View>
   );

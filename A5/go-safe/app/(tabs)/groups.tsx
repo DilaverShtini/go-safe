@@ -35,7 +35,7 @@ const INITIAL_GROUPS: GroupItem[] = [
       startTime: "21:30", 
       date: "17/12/2025", 
       initial: "A", 
-      color: "#E1BEE7", 
+      color: "#F3E5F5", 
       isJoined: false,
       isOrganizer: false
   },
@@ -46,7 +46,7 @@ const INITIAL_GROUPS: GroupItem[] = [
       startTime: "21:45", 
       date: "17/12/2025", 
       initial: "B", 
-      color: "#E1BEE7", 
+      color: "#F3E5F5", 
       isJoined: false,
       isOrganizer: false
   },
@@ -80,7 +80,7 @@ export default function GroupsScreen() {
       startTime: newGroupData.startTime,
       date: newGroupData.date, 
       initial: newGroupData.initial,
-      color: "#E1BEE7",
+      color: "#F3E5F5",
       isJoined: true,     
       isOrganizer: true, 
     };
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#DDD",
+    backgroundColor: "#F3E5F5",
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,

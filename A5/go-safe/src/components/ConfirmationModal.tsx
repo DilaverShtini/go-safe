@@ -40,12 +40,10 @@ export default function ConfirmationModal({
               <Text style={styles.message}>{message}</Text>
 
               <View style={styles.buttonRow}>
-                {/* Tasto Annulla */}
                 <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
                   <Text style={styles.cancelText}>{cancelText}</Text>
                 </TouchableOpacity>
 
-                {/* Tasto Conferma */}
                 <TouchableOpacity 
                     style={[styles.confirmButton, isDestructive && styles.destructiveButton]} 
                     onPress={onConfirm}

@@ -121,7 +121,6 @@ const OSMInput = ({ label, placeholder, value, onSelect, zIndex }: any) => {
                 {loading && <ActivityIndicator size="small" color="#6C5CE7" style={{marginRight: 10}}/>}
             </View>
 
-            {/* LISTA STATICA */}
             {showList && results.length > 0 && (
                 <View style={styles.suggestionsBox}>
                     {results.map((item, index) => (
@@ -234,7 +233,6 @@ export default function CreateGroupModal({ visible, onClose, onSubmit }: CreateG
                 <View style={{ width: 24 }} /> 
               </View>
 
-              {/* INPUT LUOGHI */}
               <View style={styles.inputGroup}>
                 
                 <OSMInput 
@@ -246,7 +244,6 @@ export default function CreateGroupModal({ visible, onClose, onSubmit }: CreateG
                 />
                 
                 <View style={{height: 15, zIndex: -1}}/>
-
                 <OSMInput 
                     label="Luogo di arrivo"
                     placeholder="Cerca destinazione..."
@@ -254,10 +251,8 @@ export default function CreateGroupModal({ visible, onClose, onSubmit }: CreateG
                     onSelect={(val: string) => setEndLocation(val)}
                     zIndex={1000} 
                 />
-
               </View>
 
-              {/* DATA */}
               <View style={styles.cardSection}>
                 <Text style={styles.sectionTitle}>Seleziona la data della partenza</Text>
                 <View style={styles.displayRow}>
@@ -286,7 +281,6 @@ export default function CreateGroupModal({ visible, onClose, onSubmit }: CreateG
                 )}
               </View>
 
-              {/* ORARIO */}
               <View style={styles.cardSection}>
                 <Text style={styles.sectionTitle}>Scegli l'orario della partenza</Text>
                 <View style={styles.displayRow}>
